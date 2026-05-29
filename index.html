@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Mass Tension Visualizer</title>
+    <title>PhysicSim HD - Interactive Physics Laboratories</title>
     <!-- Google Fonts for premium typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,26 +11,139 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Main Dashboard Container -->
-    <div class="dashboard">
+
+    <!-- 1. HOMEPAGE VIEW ("PhysicSim HD") -->
+    <div id="home-view" class="home-container">
+        <!-- Main Landing Header -->
+        <header class="home-header">
+            <div class="logo-area">
+                <svg class="logo-icon-large" viewBox="0 0 24 24" width="32" height="32">
+                    <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                </svg>
+                <span>PhysicSim <strong>HD</strong></span>
+            </div>
+            <div class="header-tag">DIGITAL PHYSICAL LABORATORY</div>
+        </header>
+
+        <!-- Hero Welcome Section -->
+        <section class="hero-section">
+            <h1 class="hero-title">High-Definition Physics Simulators</h1>
+            <p class="hero-subtitle">Interactive visual workspaces mapped to IB Physics and AP Physics syllabus guidelines. Explore classical mechanics, electromagnetism, and thermodynamics.</p>
+        </section>
+
+        <!-- Simulators Grid Layout -->
+        <main class="sims-grid">
+            <!-- Card 1: Multi-Mass Tension Visualizer (ACTIVE) -->
+            <div class="sim-card active-sim" id="card-tension-sim">
+                <div class="card-preview">
+                    <!-- SVG stylized representation of connected blocks -->
+                    <svg viewBox="0 0 200 100" class="preview-svg">
+                        <defs>
+                            <linearGradient id="prev-grad-1" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#fb7185" />
+                                <stop offset="100%" stop-color="#be123c" />
+                            </linearGradient>
+                            <linearGradient id="prev-grad-2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#38bdf8" />
+                                <stop offset="100%" stop-color="#0369a1" />
+                            </linearGradient>
+                            <linearGradient id="prev-grad-3" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#fbbf24" />
+                                <stop offset="100%" stop-color="#b45309" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="15" y="45" width="26" height="26" rx="4" fill="url(#prev-grad-1)" />
+                        <rect x="65" y="42" width="32" height="32" rx="4" fill="url(#prev-grad-2)" />
+                        <rect x="125" y="38" width="40" height="40" rx="4" fill="url(#prev-grad-3)" />
+                        <line x1="41" y1="58" x2="65" y2="58" stroke="#fb923c" stroke-width="3" />
+                        <line x1="97" y1="58" x2="125" y2="58" stroke="#f97316" stroke-width="4.5" />
+                        <!-- Red pulling vector arrow -->
+                        <line x1="165" y1="58" x2="190" y2="58" stroke="#ef4444" stroke-width="3" stroke-dasharray="3 2" />
+                        <path d="M190 58 L184 54 L184 62 Z" fill="#ef4444" />
+                    </svg>
+                    <span class="status-badge badge-active">ENTER LAB</span>
+                </div>
+                <div class="card-info">
+                    <div class="syllabus-tag">A.2 - Forces and momentum</div>
+                    <h3 class="sim-title">Multi-Mass Tension Visualizer</h3>
+                    <p class="sim-desc">Visualize tension vectors and coordinate accelerations of dynamically connected bodies experiencing static and kinetic ground friction.</p>
+                </div>
+            </div>
+
+            <!-- Card 2: Projectile Motion Lab (Placeholder) -->
+            <div class="sim-card locked-sim">
+                <div class="card-preview">
+                    <svg viewBox="0 0 200 100" class="preview-svg muted-svg">
+                        <path d="M 20 80 Q 100 20 180 80" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none" stroke-dasharray="4 4" />
+                        <circle cx="20" cy="80" r="6" fill="#64748b" />
+                        <circle cx="100" cy="42" r="6" fill="#64748b" />
+                        <circle cx="180" cy="80" r="6" fill="#64748b" />
+                    </svg>
+                    <span class="status-badge badge-locked">COMING SOON</span>
+                </div>
+                <div class="card-info">
+                    <div class="syllabus-tag locked-tag">A.1 - Kinematics</div>
+                    <h3 class="sim-title">Projectile Motion Lab</h3>
+                    <p class="sim-desc">Simulate trajectories under atmospheric drag, modeling variable launch angles, gravities, and aerodynamic coefficients.</p>
+                </div>
+            </div>
+
+            <!-- Card 3: Wave Interference Lab (Placeholder) -->
+            <div class="sim-card locked-sim">
+                <div class="card-preview">
+                    <svg viewBox="0 0 200 100" class="preview-svg muted-svg">
+                        <path d="M 10 50 Q 30 20 50 50 T 90 50 T 130 50 T 170 50" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none" />
+                        <path d="M 10 50 Q 30 70 50 50 T 90 50 T 130 50 T 170 50" stroke="rgba(6,182,212,0.1)" stroke-width="1.5" fill="none" />
+                    </svg>
+                    <span class="status-badge badge-locked">COMING SOON</span>
+                </div>
+                <div class="card-info">
+                    <div class="syllabus-tag locked-tag">C.1 - Simple harmonic motion</div>
+                    <h3 class="sim-title">Wave Interference & Superposition</h3>
+                    <p class="sim-desc">Investigate wave-front diffraction, phase differences, and constructive/destructive patterns between multiple periodic point sources.</p>
+                </div>
+            </div>
+
+            <!-- Card 4: Keplerian Orbit Sim (Placeholder) -->
+            <div class="sim-card locked-sim">
+                <div class="card-preview">
+                    <svg viewBox="0 0 200 100" class="preview-svg muted-svg">
+                        <ellipse cx="100" cy="50" rx="60" ry="30" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" fill="none" />
+                        <circle cx="100" cy="50" r="12" fill="#64748b" />
+                        <circle cx="160" cy="50" r="5" fill="#475569" />
+                    </svg>
+                    <span class="status-badge badge-locked">COMING SOON</span>
+                </div>
+                <div class="card-info">
+                    <div class="syllabus-tag locked-tag">D.1 - Gravitational fields</div>
+                    <h3 class="sim-title">Keplerian Orbit Sim</h3>
+                    <p class="sim-desc">Model orbital paths of celestial bodies in central force fields, mapping gravitational potentials and Kepler's three laws.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 2. SIMULATOR VIEW (Multi-Mass Tension Visualizer Dashboard - hidden by default) -->
+    <div id="sim-view" class="dashboard" style="display: none;">
         
         <!-- Header Top Bar -->
         <header class="header">
             <div class="header-logo">
-                <svg class="logo-icon" viewBox="0 0 24 24" width="24" height="24">
-                    <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-                </svg>
-                <h1>MULTI-MASS TENSION VISUALIZER</h1>
+                <button class="icon-btn" id="homeBtn" title="Back to Homepage" style="margin-right: 4px;">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                </button>
+                <h1>PhysicSim <strong>HD</strong> <span class="header-divider">|</span> <span class="header-sub">Tension Lab</span></h1>
             </div>
             
             <div class="header-actions">
-                <button class="icon-btn" id="soundBtn" title="Toggle Sound (Mute)">
+                <button class="icon-btn" id="soundBtn" title="Toggle Sound">
                     <svg viewBox="0 0 24 24" width="20" height="20" class="sound-icon">
-                        <!-- Volume up icon -->
                         <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                     </svg>
                 </button>
-                <button class="icon-btn" id="settingsBtn" title="Settings">
+                <button class="icon-btn" id="settingsBtn" title="Friction Preset Cycler">
                     <svg viewBox="0 0 24 24" width="20" height="20">
                         <path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
                     </svg>
@@ -46,55 +159,17 @@
         <!-- Left Sidebar: Controls -->
         <aside class="sidebar sidebar-left">
             <div class="sidebar-section">
-                <h2>MASS CONFIGURATION</h2>
+                <div class="section-mass-header">
+                    <h2>MASS CONFIGURATION</h2>
+                    <div class="mass-adjust-buttons">
+                        <button class="mass-adjust-btn" id="btn-remove-mass" title="Remove last block">&minus;</button>
+                        <button class="mass-adjust-btn" id="btn-add-mass" title="Add another block">&plus;</button>
+                    </div>
+                </div>
+                
+                <!-- Dynamic masses container -->
                 <div class="mass-sliders-container">
-                    <!-- Mass 1 -->
-                    <div class="mass-control-card" data-mass="m1">
-                        <div class="mass-label">
-                            <span class="indicator m1-dot"></span>
-                            <span class="mass-name">M1</span>
-                        </div>
-                        <div class="vertical-slider-wrapper">
-                            <input type="range" class="vertical-slider" id="m1-slider" min="0.5" max="5.0" step="0.1" value="1.0">
-                        </div>
-                        <div class="mass-value-badge" id="m1-val">1.0 kg</div>
-                    </div>
-                    
-                    <!-- Mass 2 -->
-                    <div class="mass-control-card" data-mass="m2">
-                        <div class="mass-label">
-                            <span class="indicator m2-dot"></span>
-                            <span class="mass-name">M2</span>
-                        </div>
-                        <div class="vertical-slider-wrapper">
-                            <input type="range" class="vertical-slider" id="m2-slider" min="0.5" max="5.0" step="0.1" value="2.0">
-                        </div>
-                        <div class="mass-value-badge" id="m2-val">2.0 kg</div>
-                    </div>
-                    
-                    <!-- Mass 3 -->
-                    <div class="mass-control-card" data-mass="m3">
-                        <div class="mass-label">
-                            <span class="indicator m3-dot"></span>
-                            <span class="mass-name">M3</span>
-                        </div>
-                        <div class="vertical-slider-wrapper">
-                            <input type="range" class="vertical-slider" id="m3-slider" min="0.5" max="5.0" step="0.1" value="3.0">
-                        </div>
-                        <div class="mass-value-badge" id="m3-val">3.0 kg</div>
-                    </div>
-                    
-                    <!-- Mass 4 -->
-                    <div class="mass-control-card" data-mass="m4">
-                        <div class="mass-label">
-                            <span class="indicator m4-dot"></span>
-                            <span class="mass-name">M4</span>
-                        </div>
-                        <div class="vertical-slider-wrapper">
-                            <input type="range" class="vertical-slider" id="m4-slider" min="0.5" max="5.0" step="0.1" value="4.0">
-                        </div>
-                        <div class="mass-value-badge" id="m4-val">4.0 kg</div>
-                    </div>
+                    <!-- Javascript will inject mass sliders dynamically -->
                 </div>
             </div>
             
@@ -102,14 +177,15 @@
                 <h2>APPLIED FORCE</h2>
                 <div class="dial-container-outer">
                     <div class="rotary-dial-wrapper">
-                        <!-- Custom styled interactive SVG rotary dial -->
+                        <!-- Custom styled interactive SVG rotary dial with updated coordinates for clipping fix -->
                         <div class="dial-control" id="force-dial">
-                            <svg class="dial-svg" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="45" class="dial-track" />
-                                <circle cx="50" cy="50" r="45" class="dial-fill" id="dial-fill-circle" stroke-dasharray="282.7" stroke-dashoffset="282.7" />
-                                <circle cx="50" cy="50" r="38" class="dial-face" />
+                            <svg class="dial-svg" viewBox="0 0 100 100" style="overflow: visible;">
+                                <circle cx="50" cy="50" r="41" class="dial-track" />
+                                <!-- Max stroke dash offsets computed dynamically for radius = 41 -->
+                                <circle cx="50" cy="50" r="41" class="dial-fill" id="dial-fill-circle" stroke-dasharray="257.6" stroke-dashoffset="257.6" />
+                                <circle cx="50" cy="50" r="34" class="dial-face" />
                                 <!-- Indicator tick / line -->
-                                <line x1="50" y1="50" x2="50" y2="16" class="dial-indicator" id="dial-indicator-line" />
+                                <line x1="50" y1="50" x2="50" y2="18" class="dial-indicator" id="dial-indicator-line" />
                                 <!-- Text in center of dial -->
                                 <text x="50" y="55" class="dial-center-text" id="dial-text">50 N</text>
                             </svg>
@@ -126,16 +202,32 @@
                 </div>
             </div>
             
+            <!-- Upgraded Dual-Friction Configuration Section -->
             <div class="sidebar-section">
-                <div class="friction-toggle-card">
-                    <div class="friction-info">
-                        <h2>GROUND FRICTION</h2>
-                        <p class="section-desc">Kinetic Friction (&mu;<sub>k</sub> = 0.20)</p>
-                    </div>
+                <div class="friction-header-row">
+                    <h2>GROUND FRICTION</h2>
                     <label class="switch">
                         <input type="checkbox" id="friction-toggle">
                         <span class="slider-toggle"></span>
                     </label>
+                </div>
+                
+                <!-- Dynamic dual sliding friction panel -->
+                <div class="friction-control-panel" id="friction-control-panel" style="display: none;">
+                    <div class="friction-slider-group">
+                        <div class="friction-lbl-row">
+                            <span class="f-slider-title">Static (&mu;<sub>s</sub>)</span>
+                            <span class="f-slider-val" id="val-mu-s">0.35</span>
+                        </div>
+                        <input type="range" id="slider-mu-s" min="0.0" max="1.0" step="0.01" value="0.35" class="horizontal-range range-cyan">
+                    </div>
+                    <div class="friction-slider-group">
+                        <div class="friction-lbl-row">
+                            <span class="f-slider-title">Kinetic (&mu;<sub>k</sub>)</span>
+                            <span class="f-slider-val" id="val-mu-k">0.20</span>
+                        </div>
+                        <input type="range" id="slider-mu-k" min="0.0" max="1.0" step="0.01" value="0.20" class="horizontal-range range-cyan">
+                    </div>
                 </div>
             </div>
             
@@ -233,30 +325,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr id="row-m1" class="row-mass">
-                                <td><span class="table-dot m1-bg"></span>M1</td>
-                                <td id="tbl-m1-val">1.0 kg</td>
-                                <td id="tbl-m1-acc" class="mono">0.00</td>
-                                <td id="tbl-m1-ten" class="mono highlighted">0.00 N</td>
-                            </tr>
-                            <tr id="row-m2" class="row-mass">
-                                <td><span class="table-dot m2-bg"></span>M2</td>
-                                <td id="tbl-m2-val">2.0 kg</td>
-                                <td id="tbl-m2-acc" class="mono">0.00</td>
-                                <td id="tbl-m2-ten" class="mono highlighted">0.00 N</td>
-                            </tr>
-                            <tr id="row-m3" class="row-mass">
-                                <td><span class="table-dot m3-bg"></span>M3</td>
-                                <td id="tbl-m3-val">3.0 kg</td>
-                                <td id="tbl-m3-acc" class="mono">0.00</td>
-                                <td id="tbl-m3-ten" class="mono highlighted">0.00 N</td>
-                            </tr>
-                            <tr id="row-m4" class="row-mass">
-                                <td><span class="table-dot m4-bg"></span>M4</td>
-                                <td id="tbl-m4-val">4.0 kg</td>
-                                <td id="tbl-m4-acc" class="mono">0.00</td>
-                                <td id="tbl-m4-ten" class="mono highlighted">0.00 N</td>
-                            </tr>
+                            <!-- Generated Dynamically by JS -->
                         </tbody>
                     </table>
                 </div>
@@ -266,7 +335,7 @@
                 <h2>SYSTEM ACCELERATION</h2>
                 <div class="accel-readout-card">
                     <div class="accel-value-display">
-                        <span class="accel-formula">a = F / M<sub>total</sub></span>
+                        <span class="accel-formula">a = F<sub>net</sub> / M<sub>total</sub></span>
                         <span class="accel-value" id="system-accel">a = 0.00 m/s²</span>
                     </div>
                     <div class="accel-stats-grid">
@@ -293,41 +362,72 @@
             </div>
             <div class="modal-body">
                 <h3>Physics Overview</h3>
-                <p>This simulation visualizes a horizontal chain of four masses connected back-to-back by ropes, and pulled to the right by an applied force (F) on the front mass (M4).</p>
+                <p>This simulation visualizes a horizontal chain of connected masses experiencing tension under an applied force (F) pulling them to the right.</p>
                 
                 <div class="formula-block">
-                    <strong>System Acceleration (a):</strong>
-                    <p>a = F<sub>net</sub> / M<sub>total</sub></p>
-                    <p class="sub-formula">Where F<sub>net</sub> = F - Friction Force (if enabled), and M<sub>total</sub> = M1 + M2 + M3 + M4</p>
+                    <strong>Static vs. Kinetic Friction:</strong>
+                    <p>Friction opposes the start of motion with static coefficient (&mu;<sub>s</sub>) up to a threshold: f<sub>s,max</sub> = &mu;<sub>s</sub> &middot; M<sub>total</sub> &middot; g.</p>
+                    <p>Once moving, dynamic motion is resisted by kinetic coefficient (&mu;<sub>k</sub>): f<sub>k</sub> = &mu;<sub>k</sub> &middot; M<sub>total</sub> &middot; g.</p>
+                    <p class="sub-formula">The system will only accelerate if F &gt; f<sub>s,max</sub> when static, transitioning to kinetic resistance when moving.</p>
                 </div>
                 
                 <div class="formula-block">
+                    <strong>Newton's First Law (Velocity Persistence):</strong>
+                    <p>If the applied force balances out the friction force exactly (F<sub>net</sub> = 0), the system acceleration is a = 0. According to Newton's First Law, the system will continue sliding at its current constant velocity until external forces change.</p>
+                </div>
+
+                <div class="formula-block">
                     <strong>Rope Tension Calculations:</strong>
-                    <ul>
-                        <li><strong>Tension 1 (T1)</strong> (between M1 & M2): pulls M1.</li>
-                        <li><strong>Tension 2 (T2)</strong> (between M2 & M3): pulls M1 and M2.</li>
-                        <li><strong>Tension 3 (T3)</strong> (between M3 & M4): pulls M1, M2, and M3.</li>
-                    </ul>
-                    <p>Calculated as: T<sub>i</sub> = (&Sigma; M<sub>1..i</sub>) &times; a<sub>effective</sub></p>
+                    <p>Calculated at segment i pulling the masses behind it: T<sub>i</sub> = (&Sigma; M<sub>1..i</sub>) &times; a<sub>effective</sub></p>
+                    <p class="sub-formula">Where a<sub>effective</sub> = (a + &mu;<sub>k</sub> &middot; g) when sliding, and F / M<sub>total</sub> when static.</p>
                 </div>
 
                 <h3>Controls & Customization</h3>
                 <ul>
-                    <li><strong>Mass Configuration:</strong> Drag the vertical sliders in the left panel to change individual masses. The blocks update in real time.</li>
-                    <li><strong>Applied Force Dial:</strong> Click and drag circularly (or use the fallback horizontal slider) to dynamically adjust the pulling force.</li>
-                    <li><strong>Ground Friction Toggle:</strong> Toggling this on simulates sliding kinetic friction (&mu;<sub>k</sub> = 0.20), which opposes acceleration.</li>
-                    <li><strong>Simulation Play/Pause/Reset:</strong> Control the timeline. Speed buttons change the speed of animation and time integration.</li>
-                </ul>
-
-                <h3>Visual Annotations</h3>
-                <ul>
-                    <li>Ropes change color intensity and thickness dynamically to reflect the magnitude of tension.</li>
-                    <li>The Applied Force is visualized as a pulsating vector arrow pointing right from M4.</li>
-                    <li>The live graph shows how tension scales along the position of the ropes, peaking at the front block.</li>
+                    <li><strong>Mass Configuration:</strong> Adjust the sliders. Use the <strong>[+ Block]</strong> and <strong>[- Block]</strong> buttons to add or remove blocks from the workspace.</li>
+                    <li><strong>Dual Friction:</strong> Toggle friction on to reveal separate static and kinetic coefficient controllers.</li>
+                    <li><strong>Applied Force Knob:</strong> Drag circularly to apply tension. Ensure force overcomes static friction to begin sliding!</li>
                 </ul>
             </div>
             <div class="modal-footer">
                 <button class="modal-btn" id="closeHelpBtnOk">Got it, Let's Visualise!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. ONBOARDING WELCOME POP-UP MODAL (Triggers on first visit) -->
+    <div class="modal-overlay" id="welcomeModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Welcome to PhysicSim HD</h2>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 12px;">
+                    <svg viewBox="0 0 24 24" width="48" height="48" style="color: var(--accent-cyan); filter: drop-shadow(var(--accent-glow));">
+                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                    </svg>
+                </div>
+                <h3 style="text-align: center; border-left: none; padding-left: 0; margin-bottom: 12px; font-size: 1.1rem; color: #ffffff;">Your Interactive Digital Physics Lab</h3>
+                <p>Welcome! You are launching the **Multi-Mass Tension Visualizer**, designed in accordance with syllabus standards (e.g. IB Physics A.2 - Forces and Momentum).</p>
+                
+                <div class="formula-block" style="background: rgba(6,182,212,0.03); border-color: rgba(6,182,212,0.15);">
+                    <h4 style="color: var(--accent-cyan); font-weight: 700; margin-bottom: 6px; font-size: 0.8rem; text-transform: uppercase;">Simulation Objectives:</h4>
+                    <ul style="padding-left: 14px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px;">
+                        <li><strong>Overcome Friction:</strong> Set applied force F greater than static friction threshold $f_{s,\max} = \mu_s N$ to trigger sliding.</li>
+                        <li><strong>Newton's First Law:</strong> Balance forces (Applied Force = Kinetic Friction) while sliding to see constant speed velocity persistence.</li>
+                        <li><strong>Observe Tension Scaling:</strong> Verify that rope tensions decrease from front to back, pulling only the masses behind them.</li>
+                    </ul>
+                </div>
+                
+                <h4 style="font-weight: 700; color: #ffffff; font-size: 0.85rem; margin-top: 8px;">Key Controls:</h4>
+                <ul style="font-size: 0.85rem;">
+                    <li><strong>[+ Block] & [- Block]:</strong> Dynamically add/remove mass blocks from the system.</li>
+                    <li><strong>Interactive Knob:</strong> Grab and spin the force knob to control the applied pulling force.</li>
+                    <li><strong>Dual Friction:</strong> Independently adjust Static ($\mu_s$) and Kinetic ($\mu_k$) coefficients.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" id="welcomeEnterBtn" style="width: 100%;">ENTER LAB & START SIMULATING</button>
             </div>
         </div>
     </div>

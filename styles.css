@@ -26,6 +26,8 @@
     --m2-color: #0ea5e9; /* Sky Blue */
     --m3-color: #10b981; /* Emerald Green */
     --m4-color: #f59e0b; /* Amber Yellow */
+    --m5-color: #a855f7; /* Purple */
+    --m6-color: #ec4899; /* Neon Pink */
     --force-color: #ef4444; /* Bright Red */
     
     /* Accents */
@@ -190,17 +192,41 @@ body {
     margin-top: 2px;
 }
 
-/* Left Sidebar Specific: Mass Configurations */
 .mass-sliders-container {
     display: flex;
-    justify-content: space-between;
-    gap: 8px;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 10px;
     height: 220px;
-    padding: 10px 0;
+    padding: 10px 4px;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* Thin high-tech scrollbar for slider container */
+.mass-sliders-container::-webkit-scrollbar {
+    height: 6px;
+}
+.mass-sliders-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+}
+.mass-sliders-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+.mass-sliders-container::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-cyan);
+    box-shadow: var(--accent-glow);
 }
 
 .mass-control-card {
-    flex: 1;
+    flex: 0 0 52px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 8px;
@@ -241,10 +267,10 @@ body {
     color: var(--text-primary);
 }
 
-/* Custom Vertical Range Input Styling */
+/* Custom Vertical Range Input Styling (Using native vertical sliders for correct dragging orientation) */
 .vertical-slider-wrapper {
     height: 130px;
-    width: 20px;
+    width: 24px;
     position: relative;
     display: flex;
     justify-content: center;
@@ -254,14 +280,13 @@ body {
 .vertical-slider {
     -webkit-appearance: none;
     appearance: none;
-    position: absolute;
-    width: 110px; /* Length of the slider */
-    height: 4px;
+    writing-mode: vertical-lr; /* Firefox & Chrome standard */
+    direction: rtl; /* Sets bottom as min value, top as max value */
+    width: 6px;
+    height: 120px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
+    border-radius: 3px;
     outline: none;
-    transform: rotate(-90deg);
-    transform-origin: center;
     cursor: pointer;
 }
 
@@ -290,11 +315,15 @@ body {
 .mass-control-card[data-mass="m2"] .vertical-slider::-webkit-slider-thumb { background: var(--m2-color); box-shadow: 0 0 8px var(--m2-color); }
 .mass-control-card[data-mass="m3"] .vertical-slider::-webkit-slider-thumb { background: var(--m3-color); box-shadow: 0 0 8px var(--m3-color); }
 .mass-control-card[data-mass="m4"] .vertical-slider::-webkit-slider-thumb { background: var(--m4-color); box-shadow: 0 0 8px var(--m4-color); }
+.mass-control-card[data-mass="m5"] .vertical-slider::-webkit-slider-thumb { background: var(--m5-color); box-shadow: 0 0 8px var(--m5-color); }
+.mass-control-card[data-mass="m6"] .vertical-slider::-webkit-slider-thumb { background: var(--m6-color); box-shadow: 0 0 8px var(--m6-color); }
 
 .mass-control-card[data-mass="m1"] .vertical-slider::-moz-range-thumb { background: var(--m1-color); box-shadow: 0 0 8px var(--m1-color); }
 .mass-control-card[data-mass="m2"] .vertical-slider::-moz-range-thumb { background: var(--m2-color); box-shadow: 0 0 8px var(--m2-color); }
 .mass-control-card[data-mass="m3"] .vertical-slider::-moz-range-thumb { background: var(--m3-color); box-shadow: 0 0 8px var(--m3-color); }
 .mass-control-card[data-mass="m4"] .vertical-slider::-moz-range-thumb { background: var(--m4-color); box-shadow: 0 0 8px var(--m4-color); }
+.mass-control-card[data-mass="m5"] .vertical-slider::-moz-range-thumb { background: var(--m5-color); box-shadow: 0 0 8px var(--m5-color); }
+.mass-control-card[data-mass="m6"] .vertical-slider::-moz-range-thumb { background: var(--m6-color); box-shadow: 0 0 8px var(--m6-color); }
 
 .vertical-slider:hover::-webkit-slider-thumb {
     transform: scale(1.2);
@@ -338,6 +367,7 @@ body {
     cursor: grab;
     position: relative;
     transition: transform 0.1s ease;
+    overflow: visible;
 }
 
 .dial-control:active {
@@ -347,6 +377,7 @@ body {
 .dial-svg {
     width: 100%;
     height: 100%;
+    overflow: visible;
 }
 
 .dial-track {
@@ -360,10 +391,10 @@ body {
     stroke: var(--force-color);
     stroke-width: 6;
     stroke-linecap: round;
-    transform: rotate(-90deg);
-    transform-origin: 50px 50px;
-    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+    filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.55));
     transition: stroke-dashoffset 0.1s ease;
+    transform-origin: 50px 50px;
+    transform: rotate(135deg);
 }
 
 .dial-face {
@@ -814,6 +845,8 @@ input:checked + .slider-toggle:before {
 .m2-bg { background-color: var(--m2-color); }
 .m3-bg { background-color: var(--m3-color); }
 .m4-bg { background-color: var(--m4-color); }
+.m5-bg { background-color: var(--m5-color); }
+.m6-bg { background-color: var(--m6-color); }
 
 .mono {
     font-family: var(--font-mono);
@@ -828,7 +861,9 @@ input:checked + .slider-toggle:before {
 #row-m1 td.highlighted { color: var(--m1-color) !important; }
 #row-m2 td.highlighted { color: var(--m2-color) !important; }
 #row-m3 td.highlighted { color: var(--m3-color) !important; }
-#row-m4 td.highlighted { color: var(--force-color) !important; } /* Pulled by Force */
+#row-m4 td.highlighted { color: var(--force-color) !important; } /* Last mass pulled by Force */
+#row-m5 td.highlighted { color: var(--m5-color) !important; }
+#row-m6 td.highlighted { color: var(--m6-color) !important; }
 
 /* Acceleration Readout Display */
 .accel-readout-card {
@@ -1087,5 +1122,343 @@ input:checked + .slider-toggle:before {
 @media (max-width: 1200px) {
     .dashboard {
         grid-template-columns: 280px 1fr 310px;
+    }
+}
+
+/* ==========================================
+   HOMEPAGE VIEW ("PhysicSim HD" Dashboard)
+   ========================================== */
+
+.home-container {
+    height: 100vh;
+    width: 100vw;
+    overflow-y: auto;
+    background-color: var(--bg-main);
+    display: flex;
+    flex-direction: column;
+    padding: 40px 60px;
+    align-items: center;
+    position: relative;
+}
+
+/* Stars / Lab Grid background overlay on home */
+.home-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(244, 63, 94, 0.03) 0%, transparent 40%),
+        linear-gradient(rgba(255,255,255,0.003) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.003) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.home-header {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+    margin-bottom: 40px;
+    z-index: 5;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #ffffff;
+}
+
+.logo-area strong {
+    color: var(--accent-cyan);
+    text-shadow: var(--accent-glow);
+}
+
+.logo-icon-large {
+    color: var(--accent-cyan);
+    filter: drop-shadow(var(--accent-glow));
+}
+
+.header-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+}
+
+.hero-section {
+    width: 100%;
+    max-width: 800px;
+    text-align: center;
+    margin-bottom: 60px;
+    z-index: 5;
+}
+
+.hero-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ffffff 40%, #a855f7, var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 16px;
+}
+
+.hero-subtitle {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+/* Responsive Grid of Sim Cards */
+.sims-grid {
+    width: 100%;
+    max-width: 1200px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 28px;
+    z-index: 5;
+    padding-bottom: 60px;
+}
+
+.sim-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sim-card:hover {
+    border-color: var(--border-color-glow);
+    box-shadow: 0 12px 30px rgba(6, 182, 212, 0.08), inset 0 0 1px rgba(255,255,255,0.1);
+    transform: translateY(-6px);
+}
+
+.card-preview {
+    height: 160px;
+    background: rgba(10, 14, 26, 0.4);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.preview-svg {
+    width: 80%;
+    height: 80%;
+}
+
+.muted-svg {
+    opacity: 0.4;
+}
+
+.status-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.badge-active {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-locked {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+.card-info {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.syllabus-tag {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    background: rgba(6, 182, 212, 0.08);
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.locked-tag {
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.02);
+}
+
+.sim-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.sim-card.locked-sim .sim-title {
+    color: var(--text-secondary);
+}
+
+.sim-desc {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.sim-card.locked-sim {
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+.sim-card.locked-sim:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-color);
+}
+
+/* ==========================================
+   WORKSPACE MODIFICATION STYLING
+   ========================================== */
+
+/* Header updates */
+.header-divider {
+    color: rgba(255, 255, 255, 0.15);
+    font-weight: 300;
+}
+
+.header-sub {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Dynamic mass action buttons */
+.section-mass-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mass-adjust-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.mass-adjust-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mass-adjust-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mass-adjust-btn:active {
+    transform: scale(0.96);
+}
+
+/* Dual friction inputs panel */
+.friction-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.friction-control-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 12px 10px;
+    margin-top: 4px;
+    animation: slide-down 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.friction-slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.friction-lbl-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.f-slider-title {
+    color: var(--text-secondary);
+}
+
+.f-slider-val {
+    font-family: var(--font-mono);
+    color: var(--accent-cyan);
+}
+
+.range-cyan::-webkit-slider-thumb {
+    background: var(--accent-cyan) !important;
+    box-shadow: var(--accent-glow) !important;
+}
+
+.range-cyan::-moz-range-thumb {
+    background: var(--accent-cyan) !important;
+    box-shadow: var(--accent-glow) !important;
+}
+
+/* Slide Down Keyframes */
+@keyframes slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

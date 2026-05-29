@@ -1,20 +1,43 @@
 /**
- * MULTI-MASS TENSION VISUALIZER - Core Logic & Physics Engine
- * Built with HTML5 Canvas, SVG, Web Audio API, and vanilla JS.
+ * PhysicSim HD - Core Application Logic & Physics Engine
+ * Handles SPA navigation, dual friction calculations, dynamic mass arrays,
+ * 3D visual block canvas rendering, live SVG charting, and synth audio.
  */
+
+// --- STORAGE WRAPPER (Prevents SecurityError when localStorage is blocked) ---
+const storage = {
+    getItem(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            console.warn("Storage access blocked: ", e);
+            return null;
+        }
+    },
+    setItem(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            console.warn("Storage write blocked: ", e);
+        }
+    }
+};
 
 // --- STATE MANAGEMENT ---
 const state = {
-    // Physical Parameters
-    masses: {
-        m1: 1.0, // kg
-        m2: 2.0, // kg
-        m3: 3.0, // kg
-        m4: 4.0  // kg
-    },
-    appliedForce: 50.0, // N
+    // Current active view: 'home' or 'sim'
+    activeView: 'home',
+
+    // Masses list (array allows dynamic add/remove, range 2 to 6 blocks)
+    masses: [1.0, 2.0, 3.0, 4.0], // default 4 blocks
+
+    // Applied Force (F) pulling the front mass (0 to 100 N)
+    appliedForce: 50.0,
+
+    // Dual-Coefficient Ground Friction System
     frictionEnabled: false,
-    frictionCoef: 0.20, // mu_k
+    mu_s: 0.35, // Static friction coefficient
+    mu_k: 0.20, // Kinetic/Dynamic friction coefficient
     gravity: 9.81, // m/s^2
 
     // Calculated Variables
@@ -22,53 +45,54 @@ const state = {
     frictionForce: 0.0,
     netForce: 50.0,
     acceleration: 5.0, // m/s^2
-    tensions: {
-        t1: 5.0,
-        t2: 15.0,
-        t3: 30.0
-    },
+    tensions: [5.0, 15.0, 30.0], // N-1 tensions
 
-    // Simulation Clock
+    // Simulation Clock & Motion State
     isPlaying: false,
     simSpeed: 1.0, // multiplier: 0.5, 1.0, 2.0
     position: 0.0, // m (accumulated distance)
     velocity: 0.0, // m/s
     lastFrameTime: 0,
+    isStaticState: true, // starts static (v = 0)
 
     // Audio Control
-    isMuted: true, // Default to muted for better initial UX
+    isMuted: true, // Default to muted for compliance with autoplay policies
 
-    // Dragging state
+    // Dial interaction state
     isDialDragging: false
 };
 
-// --- DOM ELEMENTS ---
+// --- DOM ELEMENTS BINDING ---
 const DOM = {
-    // Sliders
-    m1Slider: document.getElementById('m1-slider'),
-    m2Slider: document.getElementById('m2-slider'),
-    m3Slider: document.getElementById('m3-slider'),
-    m4Slider: document.getElementById('m4-slider'),
-    
-    // Sliders Readouts
-    m1Val: document.getElementById('m1-val'),
-    m2Val: document.getElementById('m2-val'),
-    m3Val: document.getElementById('m3-val'),
-    m4Val: document.getElementById('m4-val'),
-    
-    // Force Inputs
+    // Navigation Views
+    homeView: document.getElementById('home-view'),
+    simView: document.getElementById('sim-view'),
+    cardTensionSim: document.getElementById('card-tension-sim'),
+    homeBtn: document.getElementById('homeBtn'),
+
+    // Dynamic mass controls
+    btnAddMass: document.getElementById('btn-add-mass'),
+    btnRemoveMass: document.getElementById('btn-remove-mass'),
+    massSlidersContainer: document.querySelector('.mass-sliders-container'),
+
+    // Force Knob / Slider
     forceDial: document.getElementById('force-dial'),
     dialFillCircle: document.getElementById('dial-fill-circle'),
     dialIndicatorLine: document.getElementById('dial-indicator-line'),
     dialText: document.getElementById('dial-text'),
     forceSlider: document.getElementById('force-slider'),
-    
-    // Toggles
+
+    // Upgraded Friction Panel elements
     frictionToggle: document.getElementById('friction-toggle'),
+    frictionControlPanel: document.getElementById('friction-control-panel'),
+    sliderMuS: document.getElementById('slider-mu-s'),
+    sliderMuK: document.getElementById('slider-mu-k'),
+    valMuS: document.getElementById('val-mu-s'),
+    valMuK: document.getElementById('val-mu-k'),
     frictionBadge: document.getElementById('friction-badge'),
     frictionText: document.getElementById('friction-text'),
-    
-    // Buttons & Speed
+
+    // Sim Buttons & Selector
     playBtn: document.getElementById('playBtn'),
     pauseBtn: document.getElementById('pauseBtn'),
     resetBtn: document.getElementById('resetBtn'),
@@ -76,34 +100,23 @@ const DOM = {
     soundBtn: document.getElementById('soundBtn'),
     helpBtn: document.getElementById('helpBtn'),
     settingsBtn: document.getElementById('settingsBtn'),
-    
-    // Canvas & Badges
+
+    // Canvas
     canvas: document.getElementById('physics-canvas'),
     distanceReadout: document.getElementById('distance-readout'),
     velocityReadout: document.getElementById('velocity-readout'),
-    
-    // Graph
+
+    // Table Tbody
+    tableBody: document.querySelector('.data-table tbody'),
+
+    // SVG Graph
     graphSvg: document.getElementById('tension-graph'),
     graphLine: document.getElementById('graph-line'),
     graphArea: document.getElementById('graph-area'),
     graphPoints: document.getElementById('graph-points'),
-    graphGrid: DOM_getGraphGridElement(),
-    
-    // Table Cells
-    tblM1Val: document.getElementById('tbl-m1-val'),
-    tblM1Acc: document.getElementById('tbl-m1-acc'),
-    tblM1Ten: document.getElementById('tbl-m1-ten'),
-    tblM2Val: document.getElementById('tbl-m2-val'),
-    tblM2Acc: document.getElementById('tbl-m2-acc'),
-    tblM2Ten: document.getElementById('tbl-m2-ten'),
-    tblM3Val: document.getElementById('tbl-m3-val'),
-    tblM3Acc: document.getElementById('tbl-m3-acc'),
-    tblM3Ten: document.getElementById('tbl-m3-ten'),
-    tblM4Val: document.getElementById('tbl-m4-val'),
-    tblM4Acc: document.getElementById('tbl-m4-acc'),
-    tblM4Ten: document.getElementById('tbl-m4-ten'),
-    
-    // Accel Display
+    graphGrid: document.querySelector('.graph-grid'),
+
+    // Readout Widgets
     systemAccel: document.getElementById('system-accel'),
     lblTotalMass: document.getElementById('lbl-total-mass'),
     lblNetForce: document.getElementById('lbl-net-force'),
@@ -111,14 +124,10 @@ const DOM = {
     // Modals
     helpModal: document.getElementById('helpModal'),
     closeHelpBtn: document.getElementById('closeHelpBtn'),
-    closeHelpBtnOk: document.getElementById('closeHelpBtnOk')
+    closeHelpBtnOk: document.getElementById('closeHelpBtnOk'),
+    welcomeModal: document.getElementById('welcomeModal'),
+    welcomeEnterBtn: document.getElementById('welcomeEnterBtn')
 };
-
-// Quick helper to fetch grid group safely
-function DOM_getGraphGridElement() {
-    const svg = document.getElementById('tension-graph');
-    return svg ? svg.querySelector('.graph-grid') : null;
-}
 
 // --- WEB AUDIO SYNTHESIZER ---
 let audioCtx = null;
@@ -131,26 +140,24 @@ function initAudio() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContext();
         
-        // Create hum oscillator for moving sound
         humOscillator = audioCtx.createOscillator();
         humGainNode = audioCtx.createGain();
         
-        humOscillator.type = 'sawtooth'; // rich sound
-        humOscillator.frequency.value = 40; // low frequency hum
+        humOscillator.type = 'sawtooth';
+        humOscillator.frequency.value = 40;
         
-        // Add a lowpass filter to make it smooth and engine-like
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = 180;
+        filter.frequency.value = 170;
         
         humOscillator.connect(filter);
         filter.connect(humGainNode);
         humGainNode.connect(audioCtx.destination);
         
-        humGainNode.gain.value = 0; // Start silent
+        humGainNode.gain.value = 0; // Silent by default
         humOscillator.start(0);
     } catch (e) {
-        console.warn("Web Audio API not supported or blocked: ", e);
+        console.warn("Web Audio Context blocked/unsupported: ", e);
     }
 }
 
@@ -161,18 +168,17 @@ function playClickSound() {
     
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     
     osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.08);
+    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.06);
     
-    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.06);
     
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.08);
+    osc.stop(audioCtx.currentTime + 0.06);
 }
 
 function playBeepSound(freq, duration, type = 'sine') {
@@ -182,7 +188,6 @@ function playBeepSound(freq, duration, type = 'sine') {
     
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     
@@ -199,117 +204,194 @@ function updateEngineHum() {
     if (!audioCtx || state.isMuted) return;
     
     if (state.isPlaying && state.velocity > 0.01) {
-        // Pitch increases with velocity
-        const pitch = Math.min(220, 40 + state.velocity * 6);
+        const pitch = Math.min(240, 42 + state.velocity * 5);
         humOscillator.frequency.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
         
-        // Volume depends on velocity and acceleration
-        const targetVolume = Math.min(0.15, 0.02 + state.velocity * 0.015);
-        humGainNode.gain.setTargetAtTime(targetVolume, audioCtx.currentTime, 0.1);
+        const volume = Math.min(0.12, 0.015 + state.velocity * 0.01);
+        humGainNode.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.15);
     } else {
-        // Fade out hum
-        humGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.15);
+        humGainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
     }
 }
 
-// --- PHYSICS CALCULATIONS ---
+// --- DYNAMIC CONTROL BUILDERS ---
+
+// 1. Build Mass Sliders Dynamically
+function buildMassSliders() {
+    DOM.massSlidersContainer.innerHTML = '';
+    
+    state.masses.forEach((val, idx) => {
+        const id = idx + 1;
+        const card = document.createElement('div');
+        card.className = 'mass-control-card';
+        card.setAttribute('data-mass', `m${id}`);
+        card.innerHTML = `
+            <div class="mass-label">
+                <span class="indicator" style="background-color: var(--m${id}-color); box-shadow: 0 0 6px var(--m${id}-color);"></span>
+                <span class="mass-name">M${id}</span>
+            </div>
+            <div class="vertical-slider-wrapper">
+                <input type="range" class="vertical-slider" min="0.5" max="5.0" step="0.1" value="${val}" data-idx="${idx}">
+            </div>
+            <div class="mass-value-badge">${val.toFixed(1)} kg</div>
+        `;
+        
+        DOM.massSlidersContainer.appendChild(card);
+        
+        // Bind event listener
+        const slider = card.querySelector('.vertical-slider');
+        slider.addEventListener('input', (e) => {
+            const index = parseInt(e.target.dataset.idx);
+            state.masses[index] = parseFloat(e.target.value);
+            
+            // Update badge text
+            card.querySelector('.mass-value-badge').textContent = `${state.masses[index].toFixed(1)} kg`;
+            
+            calculatePhysics();
+        });
+    });
+}
+
+// 2. Build Data Table Rows Dynamically
+function buildDataTableRows() {
+    DOM.tableBody.innerHTML = '';
+    
+    state.masses.forEach((m, idx) => {
+        const id = idx + 1;
+        const isLast = idx === state.masses.length - 1;
+        
+        const tr = document.createElement('tr');
+        tr.className = 'row-mass';
+        tr.id = `row-m${id}`;
+        
+        tr.innerHTML = `
+            <td><span class="table-dot" style="background-color: var(--m${id}-color);"></span>M${id}</td>
+            <td id="tbl-m${id}-val" class="mono">${m.toFixed(1)} kg</td>
+            <td id="tbl-m${id}-acc" class="mono">${state.acceleration.toFixed(2)}</td>
+            <td id="tbl-m${id}-ten" class="mono highlighted">${(isLast ? state.appliedForce : state.tensions[idx]).toFixed(1)} N</td>
+        `;
+        
+        DOM.tableBody.appendChild(tr);
+    });
+}
+
+// --- PHYSICS ENGINE CALCULATIONS (With Static & Kinetic Friction) ---
 function calculatePhysics() {
-    // Total Mass
-    state.totalMass = state.masses.m1 + state.masses.m2 + state.masses.m3 + state.masses.m4;
+    // 1. Calculate total mass
+    state.totalMass = state.masses.reduce((sum, m) => sum + m, 0);
     
-    // Friction calculations
+    // Normal Force
+    const normalForce = state.totalMass * state.gravity;
+    
+    // 2. Solve Friction Forces based on State (Static vs Kinetic)
     if (state.frictionEnabled) {
-        state.frictionForce = state.frictionCoef * state.gravity * state.totalMass;
+        const maxStaticFriction = state.mu_s * normalForce;
+        const kineticFriction = state.mu_k * normalForce;
+        
+        if (state.velocity <= 0.001) {
+            // System is static
+            state.isStaticState = true;
+            state.velocity = 0; // Force clamp
+            
+            if (state.appliedForce > maxStaticFriction) {
+                // Break static hold! Transition to kinetic motion
+                state.isStaticState = false;
+                state.frictionForce = kineticFriction;
+                state.netForce = state.appliedForce - kineticFriction;
+                state.acceleration = state.netForce / state.totalMass;
+            } else {
+                // Force fails to break static hold
+                state.frictionForce = state.appliedForce; // friction matches pull
+                state.netForce = 0.0;
+                state.acceleration = 0.0;
+            }
+        } else {
+            // System is currently in motion (Kinetic)
+            state.isStaticState = false;
+            state.frictionForce = kineticFriction;
+            state.netForce = state.appliedForce - kineticFriction; // Net force can be negative (decelerating)
+            state.acceleration = state.netForce / state.totalMass;
+        }
     } else {
+        // Friction disabled
+        state.isStaticState = state.velocity <= 0.001;
         state.frictionForce = 0.0;
-    }
-    
-    // Net Force and System Acceleration
-    state.netForce = Math.max(0.0, state.appliedForce - state.frictionForce);
-    
-    if (state.totalMass > 0) {
+        state.netForce = state.appliedForce;
         state.acceleration = state.netForce / state.totalMass;
-    } else {
-        state.acceleration = 0;
     }
     
-    // Individual Tension Calculations
-    // Tension on a segment pulling the masses behind it
-    // T_i = sum(M_1..i) * a_eff
-    // As derived, a_eff is exactly F / M_total under uniform friction
+    // 3. Tension Solver
+    // Under uniform friction, tension remains T_i = sum(M_0..i) * (F / M_total).
+    // This scales ropes correctly whether decelerating or accelerating.
     const tensionAcceleration = state.totalMass > 0 ? (state.appliedForce / state.totalMass) : 0;
     
-    state.tensions.t1 = state.masses.m1 * tensionAcceleration;
-    state.tensions.t2 = (state.masses.m1 + state.masses.m2) * tensionAcceleration;
-    state.tensions.t3 = (state.masses.m1 + state.masses.m2 + state.masses.m3) * tensionAcceleration;
-    
-    // Safety clamp check (if Force is 0, tensions must be 0)
-    if (state.appliedForce === 0) {
-        state.tensions.t1 = 0;
-        state.tensions.t2 = 0;
-        state.tensions.t3 = 0;
+    state.tensions = [];
+    for (let i = 0; i < state.masses.length - 1; i++) {
+        let cumulativeMass = 0;
+        for (let j = 0; j <= i; j++) {
+            cumulativeMass += state.masses[j];
+        }
+        state.tensions.push(cumulativeMass * tensionAcceleration);
     }
     
-    // Update displays
+    // Safety zero force clamp
+    if (state.appliedForce === 0) {
+        state.tensions = state.tensions.map(() => 0);
+    }
+    
+    // 4. Update UI readouts
     updateUIElements();
 }
 
-// --- UI UPDATER ---
+// --- UI SYNC UPDATER ---
 function updateUIElements() {
-    // Update Mass labels
-    DOM.m1Val.textContent = `${state.masses.m1.toFixed(1)} kg`;
-    DOM.m2Val.textContent = `${state.masses.m2.toFixed(1)} kg`;
-    DOM.m3Val.textContent = `${state.masses.m3.toFixed(1)} kg`;
-    DOM.m4Val.textContent = `${state.masses.m4.toFixed(1)} kg`;
+    // 1. Data table synchronization
+    state.masses.forEach((m, idx) => {
+        const id = idx + 1;
+        const isLast = idx === state.masses.length - 1;
+        const tensionVal = isLast ? state.appliedForce : state.tensions[idx];
+        
+        const cellVal = document.getElementById(`tbl-m${id}-val`);
+        const cellAcc = document.getElementById(`tbl-m${id}-acc`);
+        const cellTen = document.getElementById(`tbl-m${id}-ten`);
+        
+        if (cellVal) cellVal.textContent = `${m.toFixed(1)} kg`;
+        if (cellAcc) cellAcc.textContent = state.acceleration.toFixed(2);
+        if (cellTen) cellTen.textContent = `${tensionVal.toFixed(1)} N`;
+    });
     
-    // Update Data Table
-    DOM.tblM1Val.textContent = `${state.masses.m1.toFixed(1)} kg`;
-    DOM.tblM1Acc.textContent = state.acceleration.toFixed(2);
-    DOM.tblM1Ten.textContent = `${state.tensions.t1.toFixed(1)} N`;
-    
-    DOM.tblM2Val.textContent = `${state.masses.m2.toFixed(1)} kg`;
-    DOM.tblM2Acc.textContent = state.acceleration.toFixed(2);
-    DOM.tblM2Ten.textContent = `${state.tensions.t2.toFixed(1)} N`;
-    
-    DOM.tblM3Val.textContent = `${state.masses.m3.toFixed(1)} kg`;
-    DOM.tblM3Acc.textContent = state.acceleration.toFixed(2);
-    DOM.tblM3Ten.textContent = `${state.tensions.t3.toFixed(1)} N`;
-    
-    DOM.tblM4Val.textContent = `${state.masses.m4.toFixed(1)} kg`;
-    DOM.tblM4Acc.textContent = state.acceleration.toFixed(2);
-    // Mass 4 is pulled by the Applied Force F
-    DOM.tblM4Ten.textContent = `${state.appliedForce.toFixed(1)} N`;
-    
-    // Update Accel display
+    // 2. Numerical Readouts
     DOM.systemAccel.innerHTML = `a = ${state.acceleration.toFixed(2)} <span style="font-size: 1rem; font-weight:500;">m/s²</span>`;
     DOM.lblTotalMass.textContent = `${state.totalMass.toFixed(1)} kg`;
     
-    const displayNetForce = state.frictionEnabled ? Math.max(0, state.appliedForce - state.frictionForce) : state.appliedForce;
-    DOM.lblNetForce.textContent = `${displayNetForce.toFixed(1)} N`;
+    // Net Force widget display
+    const forceDisplay = state.frictionEnabled ? state.netForce : state.appliedForce;
+    DOM.lblNetForce.textContent = `${Math.max(0, forceDisplay).toFixed(1)} N`;
     
-    // Slider values
-    DOM.m1Slider.value = state.masses.m1;
-    DOM.m2Slider.value = state.masses.m2;
-    DOM.m3Slider.value = state.masses.m3;
-    DOM.m4Slider.value = state.masses.m4;
+    // Synchronize inputs
     DOM.forceSlider.value = state.appliedForce;
+    DOM.sliderMuS.value = state.mu_s;
+    DOM.sliderMuK.value = state.mu_k;
+    DOM.valMuS.textContent = state.mu_s.toFixed(2);
+    DOM.valMuK.textContent = state.mu_k.toFixed(2);
     
-    // Update Dial UI
+    // 3. Dial update
     updateDialUI(state.appliedForce);
     
-    // Update Graph
+    // 4. Real-time SVG chart
     drawTensionGraph();
     
-    // Check if friction limits movement
-    const frictionBadge = DOM.frictionBadge;
+    // 5. Friction status badge
     if (state.frictionEnabled) {
-        frictionBadge.classList.add('active');
+        DOM.frictionBadge.classList.add('active');
         DOM.frictionText.textContent = "ON";
         DOM.frictionToggle.checked = true;
+        DOM.frictionControlPanel.style.display = 'flex';
     } else {
-        frictionBadge.classList.remove('active');
+        DOM.frictionBadge.classList.remove('active');
         DOM.frictionText.textContent = "OFF";
         DOM.frictionToggle.checked = false;
+        DOM.frictionControlPanel.style.display = 'none';
     }
 }
 
@@ -317,18 +399,15 @@ function updateUIElements() {
 function updateDialUI(forceValue) {
     DOM.dialText.textContent = `${Math.round(forceValue)} N`;
     
-    // The force dial spans from -135deg (SW) to +135deg (SE). That's a 270 degree arc.
-    // In terms of degrees clockwise from 12 o'clock, that is from 225 deg to 495 deg (135 deg).
+    // Sweeps 270 degrees clockwise, centered: 225 deg (SW) to 135 deg (SE)
     const pct = forceValue / 100;
     const angle = 225 + pct * 270;
     
-    // Rotate indicator line
-    DOM.dialIndicatorLine.setAttribute('transform', `rotate(${angle} 50 50)`);
+    DOM.dialIndicatorLine.style.transform = `rotate(${angle}deg)`;
     
-    // Draw arc fill
-    // Dasharray is 282.7 (perimeter for r=45). 270 deg is 75% of circle -> max fill is 212.0
-    const strokeDash = 282.7;
-    const maxOffset = 212.0;
+    // Radius = 41 -> Perimeter = 257.6 -> Sweep offset = 257.6 - (pct * 193.2)
+    const strokeDash = 257.6;
+    const maxOffset = 193.2;
     const offset = strokeDash - (pct * maxOffset);
     DOM.dialFillCircle.setAttribute('stroke-dashoffset', offset);
 }
@@ -344,28 +423,20 @@ function handleDialPointerEvent(e) {
     let angleRad = Math.atan2(y, x);
     let angleDeg = angleRad * 180 / Math.PI;
     
-    // Convert angle to standard clockwise relative to 12 o'clock (0 to 360)
-    let theta = angleDeg + 90;
+    let theta = angleDeg + 90; // offset so 12 o'clock is 0
     if (theta < 0) theta += 360;
     
-    // SW is 225 deg, SE is 135 deg. Dead zone is from 135 to 225 (90 degrees).
     let valAngle = (theta - 225 + 360) % 360;
     let targetForce = 0;
     
     if (valAngle >= 0 && valAngle <= 270) {
         targetForce = (valAngle / 270) * 100;
     } else {
-        // In the dead zone at bottom: snap to closest extreme
-        if (valAngle > 315) {
-            targetForce = 0;
-        } else {
-            targetForce = 100;
-        }
+        if (valAngle > 315) targetForce = 0;
+        else targetForce = 100;
     }
     
-    // Clamp
     state.appliedForce = Math.max(0, Math.min(100, targetForce));
-    
     calculatePhysics();
 }
 
@@ -400,7 +471,7 @@ function setupDialInteractions() {
     dial.addEventListener('pointercancel', onPointerUp);
 }
 
-// --- SVG GRAPH DRAWING (Tension vs. Position) ---
+// --- SVG GRAPH (Tension vs. Position Step Plotting) ---
 function drawTensionGraph() {
     const width = 320;
     const height = 200;
@@ -412,13 +483,12 @@ function drawTensionGraph() {
     const plotWidth = width - paddingLeft - paddingRight;
     const plotHeight = height - paddingTop - paddingBottom;
     
-    const y0 = height - paddingBottom; // Y coordinate for 0 N (160)
-    const x0 = paddingLeft; // X coordinate for left axis (40)
+    const y0 = height - paddingBottom; // 160
+    const x0 = paddingLeft; // 40
     
-    // Generate grid lines once if not present, or clear and redraw
+    // Re-draw background grid lines
     if (DOM.graphGrid) {
         DOM.graphGrid.innerHTML = '';
-        // Horizontal grid lines (25%, 50%, 75%)
         for (let i = 1; i <= 4; i++) {
             const y = y0 - (i / 4) * plotHeight;
             const textVal = i * 25;
@@ -430,7 +500,6 @@ function drawTensionGraph() {
             line.setAttribute('y2', y);
             DOM.graphGrid.appendChild(line);
             
-            // Add vertical axis labels (Tension values)
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             text.setAttribute('x', x0 - 8);
             text.setAttribute('y', y + 3);
@@ -440,132 +509,106 @@ function drawTensionGraph() {
         }
     }
     
-    // Map tension points to step graph coordinates
-    // We have 5 segments on X-axis:
-    // Left of M1 (T=0) -> segment 0
-    // M1 to M2 (T=T1) -> segment 1
-    // M2 to M3 (T=T2) -> segment 2
-    // M3 to M4 (T=T3) -> segment 3
-    // Right of M4 (T=F) -> segment 4
+    const N = state.masses.length;
+    const segWidth = plotWidth / N;
     
-    const stepCount = 4; // M1, M2, M3, M4
-    const segWidth = plotWidth / stepCount; // 260 / 4 = 65px
+    // Dynamic positions list based on masses size N
+    const positions = [{ x: x0, y: y0 }];
+    for (let i = 0; i < N; i++) {
+        positions.push({
+            x: x0 + segWidth * (i + 0.7),
+            y: y0,
+            label: `M${i+1}`
+        });
+    }
     
-    const positions = [
-        { x: x0, y: y0 }, // start at (40, 160)
-        { x: x0 + segWidth * 0.7, y: y0, label: "M1" }, // M1 position
-        { x: x0 + segWidth * 1.7, y: y0, label: "M2" }, // M2 position
-        { x: x0 + segWidth * 2.7, y: y0, label: "M3" }, // M3 position
-        { x: x0 + segWidth * 3.7, y: y0, label: "M4" }  // M4 position
-    ];
+    // Tensions: Segment 0=0, Segment i=Tensions[i-1], Segment N=AppliedForce
+    const tensionsList = [0];
+    for (let i = 0; i < N - 1; i++) {
+        tensionsList.push(state.tensions[i]);
+    }
+    tensionsList.push(state.appliedForce);
     
-    // Tensions: 0, T1, T2, T3, F
-    const tensionsList = [0, state.tensions.t1, state.tensions.t2, state.tensions.t3, state.appliedForce];
-    
-    // Draw step path:
-    // We start at (x0, y0)
-    // Horizontal to positions[1].x, then jump up to tensionsList[1] (T1)
-    // Horizontal to positions[2].x, then jump up to tensionsList[2] (T2)
-    // etc.
+    // Draw step paths
     let pathD = `M ${x0} ${y0}`;
     let fillD = `M ${x0} ${y0}`;
     
     const screenY = (val) => y0 - (val / 100) * plotHeight;
     
-    for (let i = 1; i <= 4; i++) {
-        const prevTensionY = screenY(tensionsList[i-1]);
-        const currentTensionY = screenY(tensionsList[i]);
+    for (let i = 1; i <= N; i++) {
+        const prevY = screenY(tensionsList[i-1]);
+        const currentY = screenY(tensionsList[i]);
         const currentX = positions[i].x;
         
-        // Horizontal to current X
-        pathD += ` H ${currentX}`;
-        fillD += ` H ${currentX}`;
-        
-        // Vertical step up to new tension
-        pathD += ` V ${currentTensionY}`;
-        fillD += ` V ${currentTensionY}`;
+        pathD += ` H ${currentX} V ${currentY}`;
+        fillD += ` H ${currentX} V ${currentY}`;
     }
     
-    // Finish step segment right of M4
     const endX = width - paddingRight;
     const finalY = screenY(state.appliedForce);
     pathD += ` H ${endX}`;
     fillD += ` H ${endX}`;
     
-    // Close fill area
     fillD += ` V ${y0} H ${x0} Z`;
     
-    // Set path attributes
     DOM.graphLine.setAttribute('d', pathD);
     DOM.graphArea.setAttribute('d', fillD);
     
-    // Draw Data Point Dots & Labels
+    // Clear dynamic point dots & labels
     DOM.graphPoints.innerHTML = '';
     
-    for (let i = 1; i <= 4; i++) {
+    const massColors = ['var(--m1-color)', 'var(--m2-color)', 'var(--m3-color)', 'var(--m4-color)', 'var(--m5-color)', 'var(--m6-color)'];
+    
+    for (let i = 1; i <= N; i++) {
         const x = positions[i].x;
         const y = screenY(tensionsList[i]);
         
-        // Add vertical lines to show block location
-        const guideLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        guideLine.setAttribute('x1', x);
-        guideLine.setAttribute('y1', y0);
-        guideLine.setAttribute('x2', x);
-        guideLine.setAttribute('y2', y0 + 6);
-        guideLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.15)');
-        guideLine.setAttribute('stroke-width', '1');
-        DOM.graphPoints.appendChild(guideLine);
+        // Vertical guideline ticks
+        const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        tick.setAttribute('x1', x);
+        tick.setAttribute('y1', y0);
+        tick.setAttribute('x2', x);
+        tick.setAttribute('y2', y0 + 6);
+        tick.setAttribute('stroke', 'rgba(255,255,255,0.15)');
+        DOM.graphPoints.appendChild(tick);
         
-        // Add label text for masses on X axis
-        const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        xLabel.setAttribute('x', x);
-        xLabel.setAttribute('y', y0 + 18);
-        xLabel.setAttribute('class', 'graph-axis-label');
-        xLabel.setAttribute('text-anchor', 'middle');
-        xLabel.textContent = positions[i].label;
-        // color the X label to match mass
-        let labelColor = 'var(--text-secondary)';
-        if (i === 1) labelColor = 'var(--m1-color)';
-        if (i === 2) labelColor = 'var(--m2-color)';
-        if (i === 3) labelColor = 'var(--m3-color)';
-        if (i === 4) labelColor = 'var(--m4-color)';
-        xLabel.setAttribute('fill', labelColor);
-        xLabel.style.fontWeight = 'bold';
-        DOM.graphPoints.appendChild(xLabel);
+        // Block text labels (M1-M6)
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', x);
+        label.setAttribute('y', y0 + 18);
+        label.setAttribute('class', 'graph-axis-label');
+        label.setAttribute('text-anchor', 'middle');
+        label.textContent = positions[i].label;
+        label.setAttribute('fill', massColors[i-1]);
+        label.style.fontWeight = 'bold';
+        DOM.graphPoints.appendChild(label);
         
-        // Circle Dot representing tension value at the rope attachment point
+        // Circular dot marker
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', x);
         circle.setAttribute('cy', y);
         circle.setAttribute('r', '4.5');
         
-        // Colors match the tension context
-        let dotColor = 'var(--accent-cyan)';
-        if (i === 1) dotColor = 'var(--m1-color)';
-        if (i === 2) dotColor = 'var(--m2-color)';
-        if (i === 3) dotColor = 'var(--m3-color)';
-        if (i === 4) dotColor = 'var(--force-color)';
-        
+        const dotColor = (i === N) ? 'var(--force-color)' : massColors[i-1];
         circle.setAttribute('fill', dotColor);
         circle.setAttribute('stroke', '#0d1222');
         circle.setAttribute('stroke-width', '1.5');
         circle.setAttribute('class', 'graph-dot');
         
-        // Simple SVG tooltip on hover
+        // Tooltip title
         const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-        const tensionVal = tensionsList[i].toFixed(1);
-        title.textContent = i === 4 ? `Applied Force = ${tensionVal} N` : `Tension T${i} = ${tensionVal} N`;
+        title.textContent = (i === N) ? `Applied Force = ${tensionsList[i].toFixed(1)} N` : `Tension T${i} = ${tensionsList[i].toFixed(1)} N`;
         circle.appendChild(title);
         
         DOM.graphPoints.appendChild(circle);
     }
 }
 
-// Add SVG Gradient Definitions once
+// Set up SVG chart linear gradients
 function setupGraphGradients() {
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    if (DOM.graphSvg.querySelector('defs')) return;
     
-    // Gradient for filled area under graph line
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     const grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
     grad.setAttribute('id', 'graph-gradient');
     grad.setAttribute('x1', '0');
@@ -589,12 +632,12 @@ function setupGraphGradients() {
     DOM.graphSvg.insertBefore(defs, DOM.graphSvg.firstChild);
 }
 
-// --- CANVAS 2D PHYSICS SIMULATION ---
+// --- CANVAS 2D SIMULATOR (3D Bevel Block Rendering) ---
 let ctx = null;
 let canvasWidth = 800;
 let canvasHeight = 400;
 let gridOffset = 0;
-let forceArrowOffset = 0; // For dash animation of the applied force vector arrow
+let forceArrowOffset = 0;
 
 function resizeCanvas() {
     if (!DOM.canvas) return;
@@ -611,7 +654,6 @@ function resizeCanvas() {
     ctx.scale(dpr, dpr);
 }
 
-// Helper to draw rounded rectangles on canvas
 function drawRoundedRect(ctx, x, y, width, height, radius, fill, stroke, strokeWidth = 1) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
@@ -636,7 +678,82 @@ function drawRoundedRect(ctx, x, y, width, height, radius, fill, stroke, strokeW
     }
 }
 
-// Color interpolation for ropes
+// Draw a shaded 3D Block with bevel depth
+function draw3DBlock(ctx, x, y, size, massId, massValue) {
+    const radius = 6;
+    const depth = 8; // Bevel depth
+    
+    // Front face primary color (matching mass theme color)
+    const colors = {
+        m1: { front: '#f43f5e', top: '#fb7185', side: '#be123c' },
+        m2: { front: '#0ea5e9', top: '#38bdf8', side: '#0369a1' },
+        m3: { front: '#10b981', top: '#34d399', side: '#047857' },
+        m4: { front: '#f59e0b', top: '#fbbf24', side: '#b45309' },
+        m5: { front: '#a855f7', top: '#c084fc', side: '#7e22ce' },
+        m6: { front: '#ec4899', top: '#f472b6', side: '#be185d' }
+    };
+    
+    const theme = colors[`m${massId}`] || colors.m1;
+    
+    // 1. Draw soft Ground shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.beginPath();
+    ctx.ellipse(x + size/2 + depth/2, y + size + 2, size/2 + depth/2, 4, 0, 0, 2*Math.PI);
+    ctx.fill();
+    
+    // 2. Draw Top Bevel Face
+    ctx.fillStyle = theme.top;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + depth, y - depth);
+    ctx.lineTo(x + size + depth, y - depth);
+    ctx.lineTo(x + size, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.stroke();
+    
+    // 3. Draw Side Bevel Face (Darker Shade)
+    ctx.fillStyle = theme.side;
+    ctx.beginPath();
+    ctx.moveTo(x + size, y);
+    ctx.lineTo(x + size + depth, y - depth);
+    ctx.lineTo(x + size + depth, y + size - depth);
+    ctx.lineTo(x + size, y + size);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // 4. Draw Front Face (Rounded Rect)
+    drawRoundedRect(ctx, x, y, size, size, radius, theme.front, 'rgba(0,0,0,0.15)', 1.5);
+    
+    // 5. Draw hooks on the edges (wire loops)
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    
+    // Left Hook
+    ctx.beginPath();
+    ctx.arc(x, y + size/2, 5, Math.PI/2, 1.5 * Math.PI);
+    ctx.stroke();
+    
+    // Right Hook
+    ctx.beginPath();
+    ctx.arc(x + size, y + size/2, 5, -Math.PI/2, Math.PI/2);
+    ctx.stroke();
+    
+    // 6. Draw Text Label details (e.g. M1, 2.5 kg)
+    ctx.textAlign = 'center';
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `800 ${size > 60 ? '14px' : '12px'} Outfit, -apple-system, sans-serif`;
+    ctx.fillText(`M${massId}`, x + size/2, y + size/2 - 3);
+    
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = `700 ${size > 60 ? '11px' : '9.5px'} JetBrains Mono, monospace`;
+    ctx.fillText(`${massValue.toFixed(1)}kg`, x + size/2, y + size/2 + 10);
+}
+
 function interpolateColor(color1, color2, factor) {
     const r = Math.round(color1[0] + factor * (color2[0] - color1[0]));
     const g = Math.round(color1[1] + factor * (color2[1] - color1[1]));
@@ -647,17 +764,16 @@ function interpolateColor(color1, color2, factor) {
 function drawSimulation() {
     if (!ctx) return;
     
-    // Clear canvas
+    // Clear
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
-    // 1. Draw Grid Background (light blue/gray)
+    // Grid alignment parameters
     const gridSize = 40;
-    const floorY = Math.round(canvasHeight * 0.72); // Rest on floor (72% height)
+    const floorY = Math.round(canvasHeight * 0.72);
     
+    // 1. Grid Background
     ctx.strokeStyle = '#f1f5f9';
     ctx.lineWidth = 1;
-    
-    // Vertical grid lines scrolling
     const scrollOffset = gridOffset % gridSize;
     for (let x = scrollOffset; x < canvasWidth; x += gridSize) {
         ctx.beginPath();
@@ -665,8 +781,6 @@ function drawSimulation() {
         ctx.lineTo(x, floorY);
         ctx.stroke();
     }
-    
-    // Horizontal grid lines (static)
     for (let y = 0; y < floorY; y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y);
@@ -674,7 +788,7 @@ function drawSimulation() {
         ctx.stroke();
     }
     
-    // 2. Draw Ground / Floor
+    // 2. Draw Floor
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -682,12 +796,12 @@ function drawSimulation() {
     ctx.lineTo(canvasWidth, floorY);
     ctx.stroke();
     
-    // Ground friction hatch markings if enabled
+    // Draw friction hatches if active
     if (state.frictionEnabled) {
         ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         const hatchSpacing = 16;
-        const hatchOffset = (gridOffset * 1.2) % hatchSpacing; // scroll hatches too
+        const hatchOffset = (gridOffset * 1.25) % hatchSpacing;
         for (let x = hatchOffset - 20; x < canvasWidth + 20; x += hatchSpacing) {
             ctx.beginPath();
             ctx.moveTo(x, floorY);
@@ -696,164 +810,105 @@ function drawSimulation() {
         }
     }
     
-    // 3. Define Block Sizes & Relative Positions
-    // Blocks rest horizontally. They are drawn relative to center of screen.
-    // Width and height of blocks depend on their mass: size = base + mass * factor
+    // 3. Size and Position calculations
+    const N = state.masses.length;
     const baseBlockSize = 50;
     const massFactor = 8;
+    const ropeLength = 100;
+    const hookR = 5; // radius of hook
     
-    const sizes = [
-        baseBlockSize + state.masses.m1 * massFactor,
-        baseBlockSize + state.masses.m2 * massFactor,
-        baseBlockSize + state.masses.m3 * massFactor,
-        baseBlockSize + state.masses.m4 * massFactor
-    ];
+    const sizes = state.masses.map(m => baseBlockSize + m * massFactor);
     
-    // Distance between block centers or rope lengths
-    const ropeLength = 100; 
+    // Solve chain width & centering
+    let totalChainWidth = 0;
+    sizes.forEach((s, idx) => {
+        totalChainWidth += s;
+        if (idx < N - 1) totalChainWidth += ropeLength;
+    });
     
-    // Calculate layout coordinates centered horizontally
-    // Center point of chain is W/2
-    const totalChainWidth = sizes[0] + ropeLength + sizes[1] + ropeLength + sizes[2] + ropeLength + sizes[3];
     const chainStart = (canvasWidth - totalChainWidth) / 2;
     
     const blockX = [];
     let currentX = chainStart;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < N; i++) {
         blockX.push(currentX);
         currentX += sizes[i] + ropeLength;
     }
     
-    // 4. Draw Ropes / Connected Strings with Tension visual feedback
-    const baseRopeRGB = [200, 206, 218]; // Neutral gray/blue
-    const activeRopeRGB = [249, 115, 22]; // Vivid Orange/Red
-    
+    // 4. Draw Connected Ropes / Tensions
+    const baseRGB = [200, 206, 218];
+    const activeRGB = [249, 115, 22]; // Orange glow
     const maxTensionVal = 100;
-    const tensionsList = [state.tensions.t1, state.tensions.t2, state.tensions.t3];
     
-    for (let i = 0; i < 3; i++) {
-        const tension = tensionsList[i];
-        const tensionRatio = Math.min(1.0, tension / maxTensionVal);
+    for (let i = 0; i < N - 1; i++) {
+        const tension = state.tensions[i];
+        const ratio = Math.min(1.0, tension / maxTensionVal);
         
-        // Coordinate points: Right of block i, to left of block i+1
-        const xStart = blockX[i] + sizes[i];
-        const yStart = floorY - sizes[i] / 2;
-        const xEnd = blockX[i+1];
-        const yEnd = floorY - sizes[i+1] / 2;
-        
-        // Visual variables based on tension
-        const ropeColor = interpolateColor(baseRopeRGB, activeRopeRGB, tensionRatio);
-        const thickness = 2 + tensionRatio * 7; // range from 2px to 9px thickness
+        // Hooks attachments offset
+        const xStart = blockX[i] + sizes[i] + hookR;
+        const yStart = floorY - sizes[i]/2;
+        const xEnd = blockX[i+1] - hookR;
+        const yEnd = floorY - sizes[i+1]/2;
         
         ctx.save();
-        
-        // Rope Shadow Glow for tension
-        if (tensionRatio > 0.05) {
-            ctx.shadowColor = `rgba(249, 115, 22, ${tensionRatio * 0.7})`;
-            ctx.shadowBlur = tensionRatio * 12;
+        if (ratio > 0.05) {
+            ctx.shadowColor = `rgba(249, 115, 22, ${ratio * 0.7})`;
+            ctx.shadowBlur = ratio * 12;
         }
         
-        ctx.strokeStyle = ropeColor;
-        ctx.lineWidth = thickness;
+        ctx.strokeStyle = interpolateColor(baseRGB, activeRGB, ratio);
+        ctx.lineWidth = 2 + ratio * 7;
         ctx.lineCap = 'round';
         
         ctx.beginPath();
         ctx.moveTo(xStart, yStart);
         ctx.lineTo(xEnd, yEnd);
         ctx.stroke();
-        
         ctx.restore();
         
-        // 5. Draw Rope Tension Labels (T1, T2, T3 overlay)
-        ctx.font = '700 11px var(--font-mono)';
-        ctx.fillStyle = tensionRatio > 0.3 ? 'var(--accent-cyan)' : '#475569';
+        // Tension text overlay
+        ctx.font = '700 11px JetBrains Mono, monospace';
+        ctx.fillStyle = ratio > 0.3 ? 'var(--accent-cyan)' : '#475569';
         ctx.textAlign = 'center';
-        const labelX = (xStart + xEnd) / 2;
-        const labelY = (yStart + yEnd) / 2 - 10;
-        ctx.fillText(`T${i+1}: ${tension.toFixed(1)}N`, labelX, labelY);
+        ctx.fillText(`T${i+1}: ${tension.toFixed(1)}N`, (xStart + xEnd)/2, (yStart + yEnd)/2 - 10);
     }
     
-    // 6. Draw the Four Mass Blocks
-    const massColors = ['var(--m1-color)', 'var(--m2-color)', 'var(--m3-color)', 'var(--m4-color)'];
+    // 5. Draw 3D masses
+    state.masses.forEach((m, i) => {
+        draw3DBlock(ctx, blockX[i], floorY - sizes[i], sizes[i], i + 1, m);
+    });
     
-    for (let i = 0; i < 4; i++) {
-        const x = blockX[i];
-        const size = sizes[i];
-        const y = floorY - size;
-        const radius = 8;
-        
-        // Glassmorphic / clean filled box style
-        const boxColor = massColors[i];
-        
-        ctx.save();
-        // Shadow for premium volumetric feel
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 4;
-        
-        // Solid colored base
-        drawRoundedRect(ctx, x, y, size, size, radius, boxColor, 'rgba(0, 0, 0, 0.15)', 1.5);
-        
-        // Inner gradient shimmer for premium sheen
-        const shimmer = ctx.createLinearGradient(x, y, x + size, y + size);
-        shimmer.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
-        shimmer.addColorStop(0.3, 'rgba(255, 255, 255, 0.05)');
-        shimmer.addColorStop(1, 'rgba(0, 0, 0, 0.15)');
-        drawRoundedRect(ctx, x, y, size, size, radius, shimmer, null);
-        
-        ctx.restore();
-        
-        // Inside block text: Name (e.g. M1) and Mass Value
-        ctx.textAlign = 'center';
-        
-        // Bold name
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `800 ${size > 60 ? '14px' : '12px'} var(--font-sans)`;
-        ctx.fillText(`M${i+1}`, x + size / 2, y + size / 2 - 4);
-        
-        // Value text
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.font = `700 ${size > 60 ? '11px' : '9.5px'} var(--font-mono)`;
-        ctx.fillText(`${state.masses[`m${i+1}`].toFixed(1)}kg`, x + size / 2, y + size / 2 + 10);
-    }
-    
-    // 7. Draw Applied Force Vector Arrow (from M4 pointing right)
-    const m4Idx = 3;
+    // 6. Draw Applied Force Vector Arrow from last mass (pointing right)
     const forceRatio = state.appliedForce / maxTensionVal;
     
     if (state.appliedForce > 0.1) {
-        const xStart = blockX[m4Idx] + sizes[m4Idx];
-        const yStart = floorY - sizes[m4Idx] / 2;
+        const lastIdx = N - 1;
+        const xStart = blockX[lastIdx] + sizes[lastIdx] + hookR;
+        const yStart = floorY - sizes[lastIdx]/2;
         
-        // Arrow scales with force
-        const arrowLength = 50 + forceRatio * 80;
-        const xEnd = xStart + arrowLength;
+        const arrowLen = 50 + forceRatio * 80;
+        const xEnd = xStart + arrowLen;
         const yEnd = yStart;
         
         ctx.save();
-        
-        // Glowing red vector line
         ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
         ctx.shadowBlur = 10;
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         
-        // Dashed crawl animation when simulation is running
         ctx.beginPath();
         ctx.moveTo(xStart, yStart);
         ctx.lineTo(xEnd, yEnd);
         
-        // Crawl speed depends on force magnitude
         if (state.isPlaying) {
             ctx.setLineDash([8, 6]);
             ctx.lineDashOffset = -forceArrowOffset;
         }
         ctx.stroke();
-        
         ctx.restore();
         
-        // Draw Arrowhead
+        // Arrowhead
         ctx.fillStyle = '#ef4444';
         ctx.beginPath();
         ctx.moveTo(xEnd, yEnd);
@@ -863,113 +918,173 @@ function drawSimulation() {
         ctx.closePath();
         ctx.fill();
         
-        // Text vector label: "F = 50.0 N"
-        ctx.font = '800 12px var(--font-sans)';
+        // Arrow Text
+        ctx.font = '800 12px Outfit, -apple-system, sans-serif';
         ctx.fillStyle = '#ef4444';
         ctx.textAlign = 'left';
         ctx.fillText(`F: ${state.appliedForce.toFixed(1)} N`, xEnd + 8, yEnd + 4);
     }
 }
 
-// --- SIMULATION TICK LOOP ---
+// --- SIMULATION PHYSICS INTEGRATOR ---
 function simTick(timestamp) {
-    if (!state.lastFrameTime) {
-        state.lastFrameTime = timestamp;
-    }
-    
-    const dtReal = (timestamp - state.lastFrameTime) / 1000.0; // in seconds
+    if (!state.lastFrameTime) state.lastFrameTime = timestamp;
+    const dtReal = (timestamp - state.lastFrameTime) / 1000.0;
     state.lastFrameTime = timestamp;
     
-    // Apply speed multiplier, limit dt spike if tab was inactive
-    const dt = Math.min(0.1, dtReal * state.simSpeed);
+    const dt = Math.min(0.08, dtReal * state.simSpeed);
     
     if (state.isPlaying) {
-        // Integrate Physics
-        if (state.acceleration > 0) {
-            // Update velocity and distance
-            state.velocity += state.acceleration * dt;
-        } else {
-            // Friction is slowing us down or system is static
-            if (state.frictionEnabled && state.velocity > 0) {
-                // Apply sliding deceleration if force is small
-                const frictionDecel = state.frictionCoef * state.gravity;
-                state.velocity = Math.max(0, state.velocity - frictionDecel * dt);
-            } else {
-                state.velocity = 0;
-            }
+        // Integrate motion using solved acceleration
+        // Under Newton's First Law, if acceleration = 0, velocity remains constant!
+        state.velocity += state.acceleration * dt;
+        
+        // Limit velocity if it falls negative (decelerated to stop)
+        if (state.velocity < 0) {
+            state.velocity = 0;
         }
         
+        // Integrate position
         state.position += state.velocity * dt;
         
-        // Move visual grid & floor hatching to the left
-        const scale = 50; // pixels per meter
+        // Canvas visuals offsets scrolling
+        const scale = 50; // visual speed scale pixels per meter
         gridOffset -= state.velocity * dt * scale;
-        
-        // Dash animation offset for Force Vector
         forceArrowOffset += (state.appliedForce * 0.15 + 5.0) * dt * 4;
         
-        // Update Canvas labels
+        // Sync badge indicators
         DOM.distanceReadout.textContent = `${state.position.toFixed(1)} m`;
         DOM.velocityReadout.textContent = `${state.velocity.toFixed(1)} m/s`;
         
-        // Audio synthesis update
+        // Check if velocity dropped to 0 to recalibrate physics static hold
+        if (state.velocity === 0 && !state.isStaticState) {
+            calculatePhysics();
+        }
+        
+        // Synthesizer update
         updateEngineHum();
     }
     
-    // Draw
+    // Draw canvas visualizer frame
     drawSimulation();
     
-    // Loop
+    // Frame loop
+    if (state.activeView === 'sim') {
+        requestAnimationFrame(simTick);
+    }
+}
+
+// --- SPA VIEW ROUTING ---
+function navigateToHome() {
+    playClickSound();
+    state.activeView = 'home';
+    state.isPlaying = false;
+    
+    DOM.simView.style.display = 'none';
+    DOM.homeView.style.display = 'flex';
+    
+    updateEngineHum();
+}
+
+function navigateToSim() {
+    playClickSound();
+    state.activeView = 'sim';
+    
+    DOM.homeView.style.display = 'none';
+    DOM.simView.style.display = 'grid';
+    
+    // Unmute prompt for sound on navigation gesture
+    initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    
+    // Re-size and render UI
+    resizeCanvas();
+    calculatePhysics();
+    
+    // Start animation frames loop
+    state.lastFrameTime = 0;
     requestAnimationFrame(simTick);
 }
 
-// --- EVENT LISTENERS AND BINDINGS ---
+// --- SYSTEM EVENT LISTENERS AND BINDINGS ---
 function setupEventListeners() {
-    // 1. Mass Sliders
-    DOM.m1Slider.addEventListener('input', (e) => {
-        state.masses.m1 = parseFloat(e.target.value);
+    // 1. SPA Navigation Triggers
+    DOM.cardTensionSim.addEventListener('click', navigateToSim);
+    DOM.homeBtn.addEventListener('click', navigateToHome);
+
+    // 2. Add / Remove mass block manager
+    DOM.btnAddMass.addEventListener('click', () => {
+        if (state.masses.length >= 6) {
+            showNotification("Simulation limit reached: Maximum 6 mass blocks");
+            playBeepSound(180, 0.12, 'sawtooth');
+            return;
+        }
+        
+        // Add a 2.0 kg mass block as a reasonable standard size
+        const defaultVal = 2.0;
+        state.masses.push(defaultVal);
+        playBeepSound(520, 0.15, 'sine');
+        showNotification(`Mass block M${state.masses.length} added`);
+        
+        // Re-construct dynamic elements
         calculatePhysics();
-    });
-    DOM.m2Slider.addEventListener('input', (e) => {
-        state.masses.m2 = parseFloat(e.target.value);
-        calculatePhysics();
-    });
-    DOM.m3Slider.addEventListener('input', (e) => {
-        state.masses.m3 = parseFloat(e.target.value);
-        calculatePhysics();
-    });
-    DOM.m4Slider.addEventListener('input', (e) => {
-        state.masses.m4 = parseFloat(e.target.value);
-        calculatePhysics();
+        buildMassSliders();
+        buildDataTableRows();
     });
     
-    // 2. Horizontal Force Range Input fallback
+    DOM.btnRemoveMass.addEventListener('click', () => {
+        if (state.masses.length <= 2) {
+            showNotification("Simulation limit reached: Minimum 2 connected masses required");
+            playBeepSound(180, 0.12, 'sawtooth');
+            return;
+        }
+        
+        const removedNum = state.masses.length;
+        state.masses.pop();
+        playBeepSound(320, 0.15, 'sine');
+        showNotification(`Mass block M${removedNum} removed`);
+        
+        // Re-construct dynamic elements
+        calculatePhysics();
+        buildMassSliders();
+        buildDataTableRows();
+    });
+
+    // 3. Fallback Force Slider
     DOM.forceSlider.addEventListener('input', (e) => {
         state.appliedForce = parseFloat(e.target.value);
         calculatePhysics();
     });
-    
-    // 3. Friction Toggle
+
+    // 4. Ground Friction Toggle and Upgraded Dual Sliders
     DOM.frictionToggle.addEventListener('change', (e) => {
         state.frictionEnabled = e.target.checked;
         playBeepSound(state.frictionEnabled ? 440 : 220, 0.12, 'sine');
         calculatePhysics();
     });
     
-    // 4. Play / Pause / Reset Buttons
+    DOM.sliderMuS.addEventListener('input', (e) => {
+        state.mu_s = parseFloat(e.target.value);
+        DOM.valMuS.textContent = state.mu_s.toFixed(2);
+        calculatePhysics();
+    });
+    
+    DOM.sliderMuK.addEventListener('input', (e) => {
+        state.mu_k = parseFloat(e.target.value);
+        DOM.valMuK.textContent = state.mu_k.toFixed(2);
+        calculatePhysics();
+    });
+
+    // 5. Play / Pause / Reset Buttons
     DOM.playBtn.addEventListener('click', () => {
         playClickSound();
         if (!state.isPlaying) {
             state.isPlaying = true;
-            state.lastFrameTime = 0; // reset delta tracker
+            state.lastFrameTime = 0;
             DOM.playBtn.style.background = 'rgba(16, 185, 129, 0.25)';
             DOM.pauseBtn.classList.remove('paused');
-            
-            // Web Audio unlock on user gesture
-            initAudio();
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
         }
     });
     
@@ -990,6 +1105,7 @@ function setupEventListeners() {
         state.velocity = 0.0;
         gridOffset = 0;
         forceArrowOffset = 0;
+        state.isStaticState = true;
         
         DOM.playBtn.style.background = 'rgba(16, 185, 129, 0.1)';
         DOM.pauseBtn.classList.add('paused');
@@ -998,90 +1114,100 @@ function setupEventListeners() {
         DOM.velocityReadout.textContent = "0.0 m/s";
         
         updateEngineHum();
+        calculatePhysics();
         drawSimulation();
     });
-    
-    // 5. Speed Options
+
+    // 6. Simulation speed options selector
     DOM.speedOptions.forEach(opt => {
-        opt.addEventListener('click', (e) => {
+        opt.addEventListener('click', () => {
             playClickSound();
             DOM.speedOptions.forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
             state.simSpeed = parseFloat(opt.dataset.speed);
         });
     });
-    
-    // 6. Sound Action Header Button
+
+    // 7. Sound settings mute header button
     DOM.soundBtn.addEventListener('click', () => {
         state.isMuted = !state.isMuted;
         
         const path = DOM.soundBtn.querySelector('path');
         if (state.isMuted) {
-            // Mute Icon
+            // Mute Icon Path
             path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z');
             DOM.soundBtn.style.borderColor = 'var(--border-color)';
             DOM.soundBtn.style.color = 'var(--text-secondary)';
-            
-            // Silence hum
             if (humGainNode) humGainNode.gain.value = 0;
         } else {
-            // Volume Up Icon
+            // Sound Icon Path
             path.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
             DOM.soundBtn.style.borderColor = 'var(--accent-cyan)';
             DOM.soundBtn.style.color = 'var(--text-primary)';
-            
-            // Activate audio
             initAudio();
             updateEngineHum();
         }
     });
-    
-    // 7. Modal Events
+
+    // 8. Help / Welcome Modals
     DOM.helpBtn.addEventListener('click', () => {
         playClickSound();
         DOM.helpModal.classList.add('active');
     });
     
-    const closeModal = () => {
+    const closeHelp = () => {
         playClickSound();
         DOM.helpModal.classList.remove('active');
     };
-    DOM.closeHelpBtn.addEventListener('click', closeModal);
-    DOM.closeHelpBtnOk.addEventListener('click', closeModal);
+    DOM.closeHelpBtn.addEventListener('click', closeHelp);
+    DOM.closeHelpBtnOk.addEventListener('click', closeHelp);
     
     DOM.helpModal.addEventListener('click', (e) => {
-        if (e.target === DOM.helpModal) {
-            closeModal();
-        }
+        if (e.target === DOM.helpModal) closeHelp();
     });
-    
+
+    // Onboarding welcome modal logic
+    DOM.welcomeEnterBtn.addEventListener('click', () => {
+        playClickSound();
+        DOM.welcomeModal.classList.remove('active');
+        storage.setItem('physics_sim_onboarded', 'true');
+        // transition directly to simulator from onboarding
+        navigateToSim();
+    });
+
+    // Friction presets settings button fun
     DOM.settingsBtn.addEventListener('click', () => {
         playClickSound();
-        // Cycle ground friction coefficient for settings fun!
-        if (state.frictionCoef === 0.20) {
-            state.frictionCoef = 0.40;
+        // Cycle coefficients presets
+        if (state.mu_s === 0.35) {
+            state.mu_s = 0.65;
+            state.mu_k = 0.45;
             playBeepSound(400, 0.15, 'triangle');
-            showNotification("Friction Coefficient set to High (μ = 0.40)");
-        } else if (state.frictionCoef === 0.40) {
-            state.frictionCoef = 0.05;
+            showNotification("Friction Preset: Heavy Rubber (μs=0.65, μk=0.45)");
+        } else if (state.mu_s === 0.65) {
+            state.mu_s = 0.10;
+            state.mu_k = 0.05;
             playBeepSound(600, 0.15, 'triangle');
-            showNotification("Friction Coefficient set to Ice (μ = 0.05)");
+            showNotification("Friction Preset: Solid Ice (μs=0.10, μk=0.05)");
         } else {
-            state.frictionCoef = 0.20;
+            state.mu_s = 0.35;
+            state.mu_k = 0.20;
             playBeepSound(500, 0.15, 'triangle');
-            showNotification("Friction Coefficient set to Standard (μ = 0.20)");
+            showNotification("Friction Preset: Standard Ground (μs=0.35, μk=0.20)");
         }
         calculatePhysics();
     });
-    
-    // Window Resize handling
+
+    // Window resizing canvas handler
     window.addEventListener('resize', () => {
-        resizeCanvas();
-        drawSimulation();
+        if (state.activeView === 'sim') {
+            resizeCanvas();
+            drawSimulation();
+        }
     });
 }
 
-// Clean notification toast creator
+// Visual toast alerts
 function showNotification(text) {
     const toast = document.createElement('div');
     toast.style.position = 'fixed';
@@ -1104,48 +1230,48 @@ function showNotification(text) {
     document.body.appendChild(toast);
     toast.textContent = text;
     
-    // animate in
     requestAnimationFrame(() => {
         toast.style.opacity = '1';
         toast.style.transform = 'translateX(-50%) translateY(0)';
     });
     
-    // remove after 3s
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(-50%) translateY(20px)';
         setTimeout(() => {
             document.body.removeChild(toast);
         }, 300);
-    }, 2500);
+    }, 2200);
 }
 
-// --- SYSTEM INITIALIZATION ---
+// --- INITIALIZATION ---
 function init() {
     setupGraphGradients();
     setupDialInteractions();
     setupEventListeners();
-    
-    // Sync sound button icon with state.isMuted on init
+
+    // Trigger onboarding welcome modal if first time
+    const onboarded = storage.getItem('physics_sim_onboarded');
+    if (onboarded !== 'true') {
+        DOM.welcomeModal.classList.add('active');
+    }
+
+    // Set initial dynamic builds
+    calculatePhysics();
+    buildMassSliders();
+    buildDataTableRows();
+
+    // Initialize layout sync (initially in home view)
+    navigateToHome();
+
+    // Muted icon sync
     const path = DOM.soundBtn.querySelector('path');
     if (state.isMuted && path) {
         path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z');
         DOM.soundBtn.style.borderColor = 'var(--border-color)';
         DOM.soundBtn.style.color = 'var(--text-secondary)';
     }
-    
-    resizeCanvas();
-    calculatePhysics(); // First computation
-    
-    // Kickstart canvas animation rendering loop
-    requestAnimationFrame(simTick);
-    
-    // Play a welcoming sound
-    setTimeout(() => {
-        // Subtle hint sound
-        playBeepSound(440, 0.25, 'sine');
-    }, 1000);
 }
 
-// Boot up system when DOM is fully loaded
+// Trigger initialization
 window.addEventListener('DOMContentLoaded', init);
