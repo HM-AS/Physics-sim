@@ -71,21 +71,30 @@
                 </div>
             </div>
 
-            <!-- Card 2: Projectile Motion Lab (Placeholder) -->
-            <div class="sim-card locked-sim">
+            <!-- Card 2: Projectile Motion Lab (Active) -->
+            <div class="sim-card active-sim" id="card-projectile-sim">
                 <div class="card-preview">
-                    <svg viewBox="0 0 200 100" class="preview-svg muted-svg">
-                        <path d="M 20 80 Q 100 20 180 80" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none" stroke-dasharray="4 4" />
-                        <circle cx="20" cy="80" r="6" fill="#64748b" />
-                        <circle cx="100" cy="42" r="6" fill="#64748b" />
-                        <circle cx="180" cy="80" r="6" fill="#64748b" />
+                    <svg viewBox="0 0 200 100" class="preview-svg">
+                        <defs>
+                            <linearGradient id="prev-grad-proj" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#c084fc" />
+                                <stop offset="100%" stop-color="#7e22ce" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 20 85 Q 90 20 170 85" stroke="url(#prev-grad-proj)" stroke-width="3" fill="none" />
+                        <circle cx="20" cy="85" r="5" fill="#a855f7" />
+                        <circle cx="95" cy="36" r="5" fill="#a855f7" />
+                        <circle cx="170" cy="85" r="5" fill="#a855f7" />
+                        <!-- Air drag dashed trajectory preview -->
+                        <path d="M 20 85 Q 75 35 125 85" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="3 3" fill="none" opacity="0.7" />
+                        <circle cx="125" cy="85" r="4" fill="#06b6d4" opacity="0.7" />
                     </svg>
-                    <span class="status-badge badge-locked">COMING SOON</span>
+                    <span class="status-badge badge-active">ENTER LAB</span>
                 </div>
                 <div class="card-info">
-                    <div class="syllabus-tag locked-tag">A.1 - Kinematics</div>
+                    <div class="syllabus-tag">A.1 - Kinematics</div>
                     <h3 class="sim-title">Projectile Motion Lab</h3>
-                    <p class="sim-desc">Simulate trajectories under atmospheric drag, modeling variable launch angles, gravities, and aerodynamic coefficients.</p>
+                    <p class="sim-desc">Simulate trajectories under atmospheric drag, modeling variable launch angles, height elevations, and aerodynamic coefficients.</p>
                 </div>
             </div>
 
@@ -354,6 +363,255 @@
         </aside>
     </div>
 
+    <!-- 2.5. SIMULATOR VIEW (Projectile Motion Lab Dashboard - hidden by default) -->
+    <div id="projectile-view" class="dashboard" style="display: none;">
+        
+        <!-- Header Top Bar -->
+        <header class="header">
+            <div class="header-logo">
+                <button class="icon-btn" id="homeBtnProj" title="Back to Homepage" style="margin-right: 4px;">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                </button>
+                <h1>PhysicSim <strong>HD</strong> <span class="header-divider">|</span> <span class="header-sub">Projectile Lab</span></h1>
+            </div>
+            
+            <div class="header-actions">
+                <button class="icon-btn" id="soundBtnProj" title="Toggle Sound">
+                    <svg viewBox="0 0 24 24" width="20" height="20" class="sound-icon">
+                        <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="helpBtnProj" title="Help / Guide">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Left Sidebar: Controls -->
+        <aside class="sidebar sidebar-left">
+            <div class="sidebar-section">
+                <h2>LAUNCH CONFIGURATION</h2>
+                
+                <div class="friction-slider-group">
+                    <div class="friction-lbl-row">
+                        <span class="f-slider-title">Launch Angle</span>
+                        <span class="f-slider-val" id="val-proj-angle">45&deg;</span>
+                    </div>
+                    <input type="range" id="slider-proj-angle" min="0" max="90" step="1" value="45" class="horizontal-range range-purple">
+                </div>
+                
+                <div class="friction-slider-group">
+                    <div class="friction-lbl-row">
+                        <span class="f-slider-title">Initial Speed</span>
+                        <span class="f-slider-val" id="val-proj-speed">20 m/s</span>
+                    </div>
+                    <input type="range" id="slider-proj-speed" min="0" max="50" step="1" value="20" class="horizontal-range range-purple">
+                </div>
+                
+                <div class="friction-slider-group">
+                    <div class="friction-lbl-row">
+                        <span class="f-slider-title">Launch Height</span>
+                        <span class="f-slider-val" id="val-proj-height">5 m</span>
+                    </div>
+                    <input type="range" id="slider-proj-height" min="0" max="20" step="0.5" value="5" class="horizontal-range range-purple">
+                </div>
+
+                <div class="friction-slider-group">
+                    <div class="friction-lbl-row">
+                        <span class="f-slider-title">Object Mass</span>
+                        <span class="f-slider-val" id="val-proj-mass">1.0 kg</span>
+                    </div>
+                    <input type="range" id="slider-proj-mass" min="0.1" max="10.0" step="0.1" value="1.0" class="horizontal-range range-purple">
+                </div>
+            </div>
+            
+            <!-- Fluid Drag / Air Resistance Section -->
+            <div class="sidebar-section">
+                <div class="friction-header-row">
+                    <h2>AIR RESISTANCE</h2>
+                    <label class="switch">
+                        <input type="checkbox" id="air-res-toggle">
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+                
+                <!-- Dynamic air resistance coefficient slider -->
+                <div class="friction-control-panel" id="air-res-panel" style="display: none;">
+                    <div class="friction-slider-group">
+                        <div class="friction-lbl-row">
+                            <span class="f-slider-title">Drag Coeff. (C<sub>d</sub>)</span>
+                            <span class="f-slider-val" id="val-proj-drag">0.20</span>
+                        </div>
+                        <input type="range" id="slider-proj-drag" min="0.00" max="1.00" step="0.01" value="0.20" class="horizontal-range range-cyan">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual Options Section -->
+            <div class="sidebar-section">
+                <div class="friction-header-row">
+                    <h2>COORDINATE GRID</h2>
+                    <label class="switch">
+                        <input type="checkbox" id="grid-toggle" checked>
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h2>SIMULATION CONTROLS</h2>
+                <div class="sim-buttons">
+                    <button class="sim-btn" id="launchBtn" title="Launch Projectile" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.2); color: var(--m5-color);">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M5 13h3v-2H5v2zm10 2H9v-4h6v4zm2-8H7c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z"/>
+                        </svg>
+                        <span>LAUNCH</span>
+                    </button>
+                    <button class="sim-btn paused" id="pauseBtnProj" title="Pause Simulation">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                        </svg>
+                        <span>PAUSE</span>
+                    </button>
+                    <button class="sim-btn" id="resetBtnProj" title="Reset Simulation">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                        </svg>
+                        <span>RESET</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Central Canvas Layout: Light Theme -->
+        <main class="main-canvas-area">
+            <div class="canvas-container">
+                <canvas id="projectile-canvas"></canvas>
+                <!-- Canvas Overlays for Premium UI feel -->
+                <div class="canvas-badge proj-distance-badge">
+                    <svg viewBox="0 0 24 24" width="14" height="14" class="inline-icon" style="color: var(--m5-color);">
+                        <path fill="currentColor" d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v2h-2v-2h-3v2h-2v-2H7v2H5v-2H3v-4h2v2h2v-2h3v2h2v-2h3v2h2v-2h3v4z"/>
+                    </svg>
+                    <span>Range: <strong id="range-readout-badge">0.0 m</strong></span>
+                </div>
+                <div class="canvas-badge proj-velocity-badge">
+                    <svg viewBox="0 0 24 24" width="14" height="14" class="inline-icon" style="color: var(--m5-color);">
+                        <path fill="currentColor" d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 12 6a7.92 7.92 0 0 1 4.9 1.69l1.24-1.86A9.97 9.97 0 0 0 12 4c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10c0-2-.59-3.87-1.62-5.43zM10 10h4v2h-4v-2z"/>
+                    </svg>
+                    <span>Height: <strong id="height-readout-badge">0.0 m</strong></span>
+                </div>
+                <div class="canvas-badge friction-status-badge" id="air-res-badge">
+                    <span>Air Resistance: <strong id="air-res-text">OFF</strong></span>
+                </div>
+
+                <!-- Zoom Slider HUD Overlay (placed on the right edge of canvas container) -->
+                <div class="zoom-slider-hud" title="Adjust Zoom Level">
+                    <span class="zoom-icon-btn" id="zoom-in-btn">&plus;</span>
+                    <div class="zoom-slider-wrapper">
+                        <input type="range" id="zoom-slider" min="5" max="100" value="30" class="vertical-range">
+                    </div>
+                    <span class="zoom-icon-btn" id="zoom-out-btn">&minus;</span>
+                    <span class="zoom-val-label" id="zoom-value-label">100%</span>
+                </div>
+
+                <!-- SUVAT Live Telemetry HUD Overlay (placed in the bottom-left of canvas container) -->
+                <div class="suvat-hud" id="suvat-hud-panel">
+                    <div class="suvat-title">SUVAT LIVE TELEMETRY</div>
+                    <div class="suvat-grid">
+                        <div class="suvat-row">
+                            <span class="suvat-letter letter-s">S</span>
+                            <span class="suvat-lbl">Displacement</span>
+                            <span class="suvat-val" id="suvat-s">x: 0.00, y: 5.00 m</span>
+                        </div>
+                        <div class="suvat-row">
+                            <span class="suvat-letter letter-u">U</span>
+                            <span class="suvat-lbl">Initial Vel.</span>
+                            <span class="suvat-val" id="suvat-u">u<sub>x</sub>: 14.14, u<sub>y</sub>: 14.14 m/s</span>
+                        </div>
+                        <div class="suvat-row">
+                            <span class="suvat-letter letter-v">V</span>
+                            <span class="suvat-lbl">Current Vel.</span>
+                            <span class="suvat-val" id="suvat-v">v<sub>x</sub>: 14.14, v<sub>y</sub>: 14.14 m/s</span>
+                        </div>
+                        <div class="suvat-row">
+                            <span class="suvat-letter letter-a">A</span>
+                            <span class="suvat-lbl">Acceleration</span>
+                            <span class="suvat-val" id="suvat-a">a<sub>x</sub>: 0.00, a<sub>y</sub>: -9.81 m/s²</span>
+                        </div>
+                        <div class="suvat-row">
+                            <span class="suvat-letter letter-t">T</span>
+                            <span class="suvat-lbl">Flight Time</span>
+                            <span class="suvat-val" id="suvat-t">t: 0.00 s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Right Sidebar: Data and Readouts -->
+        <aside class="sidebar sidebar-right">
+            <div class="sidebar-section accel-readout-section">
+                <h2>REAL-TIME TELEMETRY</h2>
+                <div class="accel-readout-card" style="background: rgba(168, 85, 247, 0.03); border-color: rgba(168, 85, 247, 0.1);">
+                    <div class="accel-value-display">
+                        <span class="accel-formula">Horizontal Range (R)</span>
+                        <span class="accel-value" id="telemetry-range" style="color: var(--m5-color); text-shadow: 0 0 15px rgba(168, 85, 247, 0.4); font-size: 1.5rem;">R = 0.00 m</span>
+                    </div>
+                    <div class="accel-stats-grid">
+                        <div class="stat-box">
+                            <span class="stat-label">Max Height (H)</span>
+                            <span class="stat-number" id="telemetry-height">0.00 m</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Time of Flight</span>
+                            <span class="stat-number" id="telemetry-time">0.00 s</span>
+                        </div>
+                        <div class="stat-box" style="grid-column: span 2; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; margin-top: 4px;">
+                            <span class="stat-label">Velocity (v<sub>x</sub>, v<sub>y</sub>)</span>
+                            <span class="stat-number" id="telemetry-velocity" style="font-family: var(--font-mono); font-size: 0.82rem;">(0.00, 0.00) m/s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section table-section">
+                <h2>TRIALS LOG</h2>
+                <div class="table-container">
+                    <table class="data-table" id="trials-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Angle</th>
+                                <th>Speed</th>
+                                <th>Height</th>
+                                <th>Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="empty-log-row"><td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic;">No launches yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h2>KINEMATICS REFERENCE</h2>
+                <div class="formula-block" style="font-size: 0.75rem;">
+                    <strong>Ideal Kinematics Equations:</strong>
+                    <p style="font-size: 0.75rem; margin: 4px 0;">x(t) = v<sub>0</sub> cos(&theta;) &middot; t</p>
+                    <p style="font-size: 0.75rem; margin: 4px 0;">y(t) = y<sub>0</sub> + v<sub>0</sub> sin(&theta;) &middot; t - &frac12; g t<sup>2</sup></p>
+                    <div class="sub-formula" style="margin-top: 6px;">
+                        Air resistance scales acceleration dynamically based on quadratic fluid drag: a = (F<sub>gravity</sub> + F<sub>drag</sub>) / m.
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
     <!-- Help Modal Overlay -->
     <div class="modal-overlay" id="helpModal">
         <div class="modal-card">
@@ -429,6 +687,43 @@
             </div>
             <div class="modal-footer">
                 <button class="modal-btn" id="welcomeEnterBtn" style="width: 100%;">ENTER LAB & START SIMULATING</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projectile Help Modal Overlay -->
+    <div class="modal-overlay" id="projectileHelpModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Projectile Motion Lab Guide</h2>
+                <button class="modal-close" id="closeHelpBtnProj">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h3>Physics Overview</h3>
+                <p>This lab simulates the two-dimensional trajectory of a projectile launched from an elevated platform.</p>
+                
+                <div class="formula-block">
+                    <strong>2D Motion Decomposition:</strong>
+                    <p>Horizontal component: v<sub>0x</sub> = v<sub>0</sub> &middot; cos(&theta;)</p>
+                    <p>Vertical component: v<sub>0y</sub> = v<sub>0</sub> &middot; sin(&theta;)</p>
+                    <p class="sub-formula">The motion is a superposition of independent horizontal and vertical displacements.</p>
+                </div>
+                
+                <div class="formula-block">
+                    <strong>Air Resistance (Fluid Drag):</strong>
+                    <p>F<sub>d</sub> = &frac12; &middot; &rho; &middot; C<sub>d</sub> &middot; A &middot; v<sup>2</sup></p>
+                    <p class="sub-formula">Drag acts opposite to the velocity vector, slowing the object down and creating an asymmetric path.</p>
+                </div>
+
+                <h3>Controls & Customization</h3>
+                <ul>
+                    <li><strong>Launch Angle & Speed:</strong> Adjusts initial velocity components.</li>
+                    <li><strong>Launch Height:</strong> Sets launcher elevation above the ground.</li>
+                    <li><strong>Air Resistance Toggle:</strong> Adjusts fluid drag coefficient. Smaller mass results in higher deceleration!</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" id="closeHelpBtnOkProj" style="background: var(--m5-color); box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);">Got it, Let's Launch!</button>
             </div>
         </div>
     </div>

@@ -668,10 +668,13 @@ input:checked + .slider-toggle:before {
     border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-#physics-canvas {
+#physics-canvas, #projectile-canvas {
     width: 100%;
     height: 100%;
     display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
 /* Canvas UI Badges */
@@ -1460,5 +1463,376 @@ input:checked + .slider-toggle:before {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* Purple Slider Thumb override for Projectile Controls */
+.range-purple::-webkit-slider-thumb {
+    background: var(--m5-color) !important;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.5) !important;
+}
+
+.range-purple::-moz-range-thumb {
+    background: var(--m5-color) !important;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.5) !important;
+}
+
+/* Repositioned Projectile Badges to prevent coordinate ticks overlaps */
+.proj-distance-badge {
+    top: 16px;
+    left: 110px;
+}
+.proj-velocity-badge {
+    top: 16px;
+    left: 250px;
+}
+
+/* Vertical Zoom HUD Slider Overlay */
+.zoom-slider-hud {
+    position: absolute;
+    right: 16px;
+    top: 70px;
+    bottom: 20px;
+    width: 48px;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.zoom-slider-hud:hover {
+    border-color: rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.15);
+}
+
+.zoom-icon-btn {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.zoom-icon-btn:hover {
+    color: var(--m5-color);
+}
+
+.zoom-slider-wrapper {
+    height: 60%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Custom HUD Vertical range input styling */
+.vertical-range {
+    -webkit-appearance: none;
+    appearance: none;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 6px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.vertical-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--m5-color);
+    box-shadow: 0 0 8px var(--m5-color);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.vertical-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--m5-color);
+    box-shadow: 0 0 8px var(--m5-color);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.15s ease;
+}
+
+.vertical-range:hover::-webkit-slider-thumb {
+    transform: scale(1.2);
+}
+.vertical-range:hover::-moz-range-thumb {
+    transform: scale(1.2);
+}
+
+.zoom-val-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* SUVAT Telemetry HUD Overlay Panel */
+.suvat-hud {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    width: 270px;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(168, 85, 247, 0.18);
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), inset 0 0 1px rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+.suvat-hud:hover {
+    border-color: rgba(168, 85, 247, 0.35);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
+}
+
+.suvat-title {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 6px;
+}
+
+.suvat-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.suvat-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.suvat-letter {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    font-family: var(--font-sans);
+    font-size: 0.65rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+}
+
+/* Color Coding for SUVAT HUD Letters */
+.letter-s { background: #3b82f6; box-shadow: 0 0 4px rgba(59, 130, 246, 0.4); } /* S - Blue */
+.letter-u { background: #10b981; box-shadow: 0 0 4px rgba(16, 185, 129, 0.4); } /* U - Green */
+.letter-v { background: #ef4444; box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); }   /* V - Red */
+.letter-a { background: #f59e0b; box-shadow: 0 0 4px rgba(245, 158, 11, 0.4); }  /* A - Amber */
+.letter-t { background: #a855f7; box-shadow: 0 0 4px rgba(168, 85, 247, 0.4); }  /* T - Purple */
+
+.suvat-lbl {
+    flex: 1;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: left;
+}
+
+.suvat-val {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: right;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN SYSTEM (Multi-Device Layouts)
+   ========================================== */
+
+/* 1. Medium Screens / Tablet Portrait (max-width: 1024px) */
+@media (max-width: 1024px) {
+    .dashboard {
+        grid-template-columns: 280px 1fr !important;
+        grid-template-rows: 60px 1fr auto !important;
+        height: auto !important;
+        min-height: 100vh;
+        width: 100vw;
+    }
+    
+    .sidebar-left {
+        grid-column: 1 !important;
+        grid-row: 2 / 4 !important;
+        height: calc(100vh - 60px) !important;
+        position: sticky !important;
+        top: 60px;
+        border-right: 1px solid var(--border-color);
+        overflow-y: auto;
+    }
+    
+    .main-canvas-area {
+        grid-column: 2 !important;
+        grid-row: 2 !important;
+        height: 500px !important;
+        min-height: 400px;
+        padding: 16px !important;
+    }
+    
+    .sidebar-right {
+        grid-column: 2 !important;
+        grid-row: 3 !important;
+        border-left: none !important;
+        border-top: 1px solid var(--border-color);
+        height: auto !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 20px !important;
+        overflow-y: visible !important;
+        padding: 20px !important;
+    }
+    
+    .sidebar-right .sidebar-section {
+        flex: 1 1 300px;
+    }
+}
+
+/* 2. Mobile / Small Screens (max-width: 768px) */
+@media (max-width: 768px) {
+    .dashboard {
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100vh;
+        width: 100vw;
+    }
+    
+    .header {
+        height: 60px;
+        flex-shrink: 0;
+    }
+    
+    .main-canvas-area {
+        width: 100% !important;
+        height: 400px !important;
+        padding: 12px !important;
+        order: 1 !important; /* Move canvas below header */
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .sidebar-left {
+        width: 100% !important;
+        height: auto !important;
+        order: 2 !important; /* Move controls second */
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color);
+        position: static !important; /* Remove sticky on mobile */
+        overflow-y: visible !important;
+        padding: 16px !important;
+    }
+    
+    .sidebar-right {
+        width: 100% !important;
+        height: auto !important;
+        order: 3 !important; /* Move logs/tables third */
+        border-top: none !important;
+        border-bottom: none !important;
+        padding: 16px !important;
+    }
+    
+    .home-container {
+        padding: 24px 16px !important;
+    }
+    
+    .hero-title {
+        font-size: 2rem !important;
+    }
+    
+    .hero-subtitle {
+        font-size: 0.9rem !important;
+    }
+    
+    .home-header {
+        flex-direction: column !important;
+        gap: 16px !important;
+        align-items: flex-start !important;
+        margin-bottom: 24px !important;
+    }
+    
+    /* Make logs table scrollable horizontally on small screens */
+    .table-container {
+        overflow-x: auto !important;
+        width: 100% !important;
+    }
+    
+    /* Adjust badges and HUD scale for mobile screens */
+    .suvat-hud {
+        width: 240px !important;
+        left: 10px !important;
+        bottom: 10px !important;
+        transform: scale(0.85);
+        transform-origin: bottom left;
+    }
+    
+    .zoom-slider-hud {
+        right: 10px !important;
+        top: 50px !important;
+        bottom: 50px !important;
+        transform: scale(0.85);
+        transform-origin: right center;
+    }
+}
+
+/* 3. Tiny Screens / Phones (max-width: 600px) */
+@media (max-width: 600px) {
+    .header h1 {
+        font-size: 0.95rem !important;
+    }
+    .header-divider, .header-sub {
+        display: none !important;
+    }
+    .header {
+        padding: 0 12px !important;
+    }
+    
+    /* Adjust badges on canvas */
+    .distance-badge, .proj-distance-badge {
+        left: 10px !important;
+        top: 10px !important;
+        font-size: 0.7rem !important;
+        padding: 4px 8px !important;
+    }
+    .velocity-badge, .proj-velocity-badge {
+        left: 125px !important;
+        top: 10px !important;
+        font-size: 0.7rem !important;
+        padding: 4px 8px !important;
+    }
+    .friction-status-badge {
+        right: 10px !important;
+        top: 10px !important;
+        font-size: 0.7rem !important;
+        padding: 4px 8px !important;
     }
 }

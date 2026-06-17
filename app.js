@@ -25,7 +25,7 @@ const storage = {
 
 // --- STATE MANAGEMENT ---
 const state = {
-    // Current active view: 'home' or 'sim'
+    // Current active view: 'home', 'sim' (Tension), or 'projectile'
     activeView: 'home',
 
     // Masses list (array allows dynamic add/remove, range 2 to 6 blocks)
@@ -59,7 +59,43 @@ const state = {
     isMuted: true, // Default to muted for compliance with autoplay policies
 
     // Dial interaction state
-    isDialDragging: false
+    isDialDragging: false,
+
+        // Projectile Motion Lab State
+    projectile: {
+        angle: 45, // degrees
+        speed: 20, // m/s
+        height: 5, // m
+        mass: 1.0, // kg
+        airResistanceEnabled: false,
+        dragCoeff: 0.20,
+        gridEnabled: true,
+        zoomMode: 'auto', // 'auto' or 'manual'
+        manualScale: 15,  // manual scale (pixels/meter)
+        initialUx: 0,     // stored initial vx for SUVAT HUD
+        initialUy: 0,     // stored initial vy for SUVAT HUD
+
+        // Live simulation coordinates
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        time: 0,
+        isFlying: false,
+        isPaused: false,
+
+        // Captured flight stats
+        maxHeight: 0,
+        flightTime: 0,
+        maxRange: 0,
+
+        // Path tracking
+        currentPath: [], // Array of {x, y} in meters
+        ghostPaths: [],  // Array of arrays containing past runs
+        trials: [],      // History of trials logged
+
+        lastFrameTime: 0
+    }
 };
 
 // --- DOM ELEMENTS BINDING ---
@@ -67,22 +103,27 @@ const DOM = {
     // Navigation Views
     homeView: document.getElementById('home-view'),
     simView: document.getElementById('sim-view'),
+    projectileView: document.getElementById('projectile-view'),
     cardTensionSim: document.getElementById('card-tension-sim'),
+    cardProjectileSim: document.getElementById('card-projectile-sim'),
     homeBtn: document.getElementById('homeBtn'),
+    homeBtnProj: document.getElementById('homeBtnProj'),
+    soundBtnProj: document.getElementById('soundBtnProj'),
+    helpBtnProj: document.getElementById('helpBtnProj'),
 
-    // Dynamic mass controls
+    // Dynamic mass controls (Tension)
     btnAddMass: document.getElementById('btn-add-mass'),
     btnRemoveMass: document.getElementById('btn-remove-mass'),
     massSlidersContainer: document.querySelector('.mass-sliders-container'),
 
-    // Force Knob / Slider
+    // Force Knob / Slider (Tension)
     forceDial: document.getElementById('force-dial'),
     dialFillCircle: document.getElementById('dial-fill-circle'),
     dialIndicatorLine: document.getElementById('dial-indicator-line'),
     dialText: document.getElementById('dial-text'),
     forceSlider: document.getElementById('force-slider'),
 
-    // Upgraded Friction Panel elements
+    // Friction Panel elements (Tension)
     frictionToggle: document.getElementById('friction-toggle'),
     frictionControlPanel: document.getElementById('friction-control-panel'),
     sliderMuS: document.getElementById('slider-mu-s'),
@@ -92,7 +133,7 @@ const DOM = {
     frictionBadge: document.getElementById('friction-badge'),
     frictionText: document.getElementById('friction-text'),
 
-    // Sim Buttons & Selector
+    // Sim Buttons & Selector (Tension)
     playBtn: document.getElementById('playBtn'),
     pauseBtn: document.getElementById('pauseBtn'),
     resetBtn: document.getElementById('resetBtn'),
@@ -101,32 +142,80 @@ const DOM = {
     helpBtn: document.getElementById('helpBtn'),
     settingsBtn: document.getElementById('settingsBtn'),
 
-    // Canvas
+    // Canvas (Tension)
     canvas: document.getElementById('physics-canvas'),
     distanceReadout: document.getElementById('distance-readout'),
     velocityReadout: document.getElementById('velocity-readout'),
 
-    // Table Tbody
+    // Table Tbody (Tension)
     tableBody: document.querySelector('.data-table tbody'),
 
-    // SVG Graph
+    // SVG Graph (Tension)
     graphSvg: document.getElementById('tension-graph'),
     graphLine: document.getElementById('graph-line'),
     graphArea: document.getElementById('graph-area'),
     graphPoints: document.getElementById('graph-points'),
     graphGrid: document.querySelector('.graph-grid'),
 
-    // Readout Widgets
+    // Readout Widgets (Tension)
     systemAccel: document.getElementById('system-accel'),
     lblTotalMass: document.getElementById('lbl-total-mass'),
     lblNetForce: document.getElementById('lbl-net-force'),
+
+    // Projectile sliders & input controls
+    sliderProjAngle: document.getElementById('slider-proj-angle'),
+    valProjAngle: document.getElementById('val-proj-angle'),
+    sliderProjSpeed: document.getElementById('slider-proj-speed'),
+    valProjSpeed: document.getElementById('val-proj-speed'),
+    sliderProjHeight: document.getElementById('slider-proj-height'),
+    valProjHeight: document.getElementById('val-proj-height'),
+    sliderProjMass: document.getElementById('slider-proj-mass'),
+    valProjMass: document.getElementById('val-proj-mass'),
+    airResToggle: document.getElementById('air-res-toggle'),
+    airResPanel: document.getElementById('air-res-panel'),
+    sliderProjDrag: document.getElementById('slider-proj-drag'),
+    valProjDrag: document.getElementById('val-proj-drag'),
+    gridToggle: document.getElementById('grid-toggle'),
+
+    // Projectile action buttons
+    launchBtn: document.getElementById('launchBtn'),
+    pauseBtnProj: document.getElementById('pauseBtnProj'),
+    resetBtnProj: document.getElementById('resetBtnProj'),
+
+    // Projectile Canvas and badge overlays
+    canvasProj: document.getElementById('projectile-canvas'),
+    rangeReadoutBadge: document.getElementById('range-readout-badge'),
+    heightReadoutBadge: document.getElementById('height-readout-badge'),
+    airResBadge: document.getElementById('air-res-badge'),
+    airResText: document.getElementById('air-res-text'),
+
+    // Projectile Telemetry readouts
+    telemetryRange: document.getElementById('telemetry-range'),
+    telemetryHeight: document.getElementById('telemetry-height'),
+    telemetryTime: document.getElementById('telemetry-time'),
+    telemetryVelocity: document.getElementById('telemetry-velocity'),
+    trialsTableBody: document.querySelector('#trials-table tbody'),
+
+    // HUD controls and fields
+    zoomSlider: document.getElementById('zoom-slider'),
+    zoomValueLabel: document.getElementById('zoom-value-label'),
+    zoomInBtn: document.getElementById('zoom-in-btn'),
+    zoomOutBtn: document.getElementById('zoom-out-btn'),
+    suvatS: document.getElementById('suvat-s'),
+    suvatU: document.getElementById('suvat-u'),
+    suvatV: document.getElementById('suvat-v'),
+    suvatA: document.getElementById('suvat-a'),
+    suvatT: document.getElementById('suvat-t'),
 
     // Modals
     helpModal: document.getElementById('helpModal'),
     closeHelpBtn: document.getElementById('closeHelpBtn'),
     closeHelpBtnOk: document.getElementById('closeHelpBtnOk'),
     welcomeModal: document.getElementById('welcomeModal'),
-    welcomeEnterBtn: document.getElementById('welcomeEnterBtn')
+    welcomeEnterBtn: document.getElementById('welcomeEnterBtn'),
+    projectileHelpModal: document.getElementById('projectileHelpModal'),
+    closeHelpBtnProj: document.getElementById('closeHelpBtnProj'),
+    closeHelpBtnOkProj: document.getElementById('closeHelpBtnOkProj')
 };
 
 // --- WEB AUDIO SYNTHESIZER ---
@@ -198,6 +287,48 @@ function playBeepSound(freq, duration, type = 'sine') {
     
     osc.start();
     osc.stop(audioCtx.currentTime + duration);
+}
+
+function playLaunchSound() {
+    if (state.isMuted) return;
+    initAudio();
+    if (!audioCtx) return;
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.25);
+    
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.25);
+}
+
+function playLandingSound() {
+    if (state.isMuted) return;
+    initAudio();
+    if (!audioCtx) return;
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+    
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
 }
 
 function updateEngineHum() {
@@ -643,8 +774,8 @@ function resizeCanvas() {
     if (!DOM.canvas) return;
     
     const rect = DOM.canvas.parentNode.getBoundingClientRect();
-    canvasWidth = rect.width;
-    canvasHeight = rect.height;
+    canvasWidth = Math.max(1, rect.width);
+    canvasHeight = Math.max(1, rect.height);
     
     const dpr = window.devicePixelRatio || 1;
     DOM.canvas.width = canvasWidth * dpr;
@@ -926,6 +1057,585 @@ function drawSimulation() {
     }
 }
 
+// --- PROJECTILE MOTION SIMULATOR FUNCTIONS ---
+let ctxProj = null;
+let canvasWidthProj = 800;
+let canvasHeightProj = 400;
+
+function resizeCanvasProj() {
+    if (!DOM.canvasProj) return;
+    
+    const rect = DOM.canvasProj.parentNode.getBoundingClientRect();
+    canvasWidthProj = Math.max(1, rect.width);
+    canvasHeightProj = Math.max(1, rect.height);
+    
+    const dpr = window.devicePixelRatio || 1;
+    DOM.canvasProj.width = canvasWidthProj * dpr;
+    DOM.canvasProj.height = canvasHeightProj * dpr;
+    
+    ctxProj = DOM.canvasProj.getContext('2d');
+    ctxProj.scale(dpr, dpr);
+}
+
+function drawProjectileSimulation() {
+    if (!ctxProj) return;
+    
+    // Clear canvas
+    ctxProj.clearRect(0, 0, canvasWidthProj, canvasHeightProj);
+    
+    const proj = state.projectile;
+    const yFloor = Math.round(canvasHeightProj * 0.82);
+    const xLaunch = 80;
+    
+    // 1. Solve scale dynamically to fit the flight arc nicely within the canvas borders (or use manual override)
+    const angleRad = proj.angle * Math.PI / 180;
+    const g = 9.81;
+    let currentScale = proj.scale;
+    
+    if (proj.zoomMode === 'auto') {
+        const vx0 = proj.speed * Math.cos(angleRad);
+        const vy0 = proj.speed * Math.sin(angleRad);
+        
+        const tFlightEst = (vy0 + Math.sqrt(vy0 * vy0 + 2 * g * proj.height)) / g;
+        const rMaxEst = vx0 * tFlightEst;
+        const hMaxEst = proj.height + (vy0 * vy0) / (2 * g);
+        
+        const padX = 160;
+        const padY = 100;
+        
+        const targetScaleX = (canvasWidthProj - padX) / Math.max(5, rMaxEst);
+        const targetScaleY = (yFloor - padY) / Math.max(5, hMaxEst);
+        
+        currentScale = Math.min(targetScaleX, targetScaleY);
+        currentScale = Math.max(2.0, Math.min(30.0, currentScale));
+        proj.scale = currentScale;
+        
+        // Update Zoom HUD slider value (maps scale to range 5 to 100)
+        if (DOM.zoomSlider) {
+            const sliderVal = Math.round(currentScale * 2.5);
+            DOM.zoomSlider.value = Math.max(5, Math.min(100, sliderVal));
+        }
+    } else {
+        currentScale = proj.manualScale;
+        proj.scale = currentScale;
+    }
+    
+    // Update Zoom HUD percentage readout
+    if (DOM.zoomValueLabel) {
+        DOM.zoomValueLabel.textContent = `${Math.round((currentScale / 10) * 100)}%`;
+    }
+    
+    // 2. Draw Coordinate Grid if enabled
+    if (proj.gridEnabled) {
+        ctxProj.strokeStyle = '#f1f5f9';
+        ctxProj.lineWidth = 1;
+        
+        let interval = 10;
+        if (currentScale > 18) interval = 2;
+        else if (currentScale > 8) interval = 5;
+        else if (currentScale > 3) interval = 10;
+        else if (currentScale > 1.2) interval = 25;
+        else interval = 50;
+        
+        // Vertical grid lines
+        for (let m = 0; m * currentScale < canvasWidthProj; m += interval) {
+            const x = xLaunch + m * currentScale;
+            ctxProj.beginPath();
+            ctxProj.moveTo(x, 0);
+            ctxProj.lineTo(x, yFloor);
+            ctxProj.stroke();
+            
+            // X label ticks
+            ctxProj.font = '500 10px JetBrains Mono, monospace';
+            ctxProj.fillStyle = 'var(--text-muted)';
+            ctxProj.textAlign = 'center';
+            ctxProj.fillText(`${m}m`, x, yFloor + 18);
+        }
+        
+        // Horizontal grid lines
+        for (let m = 0; m * currentScale < yFloor; m += interval) {
+            const y = yFloor - m * currentScale;
+            ctxProj.beginPath();
+            ctxProj.moveTo(xLaunch, y);
+            ctxProj.lineTo(canvasWidthProj, y);
+            ctxProj.stroke();
+            
+            // Y label ticks
+            ctxProj.font = '500 10px JetBrains Mono, monospace';
+            ctxProj.fillStyle = 'var(--text-muted)';
+            ctxProj.textAlign = 'right';
+            ctxProj.fillText(`${m}m`, xLaunch - 8, y + 4);
+        }
+    }
+    
+    // 3. Draw Ground Line
+    ctxProj.strokeStyle = '#e2e8f0';
+    ctxProj.lineWidth = 3;
+    ctxProj.beginPath();
+    ctxProj.moveTo(0, yFloor);
+    ctxProj.lineTo(canvasWidthProj, yFloor);
+    ctxProj.stroke();
+    
+    // Hatches
+    ctxProj.strokeStyle = 'rgba(168, 85, 247, 0.08)';
+    ctxProj.lineWidth = 2;
+    for (let x = 0; x < canvasWidthProj; x += 16) {
+        ctxProj.beginPath();
+        ctxProj.moveTo(x, yFloor);
+        ctxProj.lineTo(x - 8, yFloor + 10);
+        ctxProj.stroke();
+    }
+    
+    // 4. Draw Ghost Trails
+    proj.ghostPaths.forEach((path) => {
+        ctxProj.strokeStyle = 'rgba(168, 85, 247, 0.15)';
+        ctxProj.lineWidth = 1.5;
+        ctxProj.setLineDash([4, 4]);
+        ctxProj.beginPath();
+        path.forEach((pt, idx) => {
+            const sx = xLaunch + pt.x * currentScale;
+            const sy = yFloor - pt.y * currentScale;
+            if (idx === 0) ctxProj.moveTo(sx, sy);
+            else ctxProj.lineTo(sx, sy);
+        });
+        ctxProj.stroke();
+        ctxProj.setLineDash([]);
+    });
+    
+    // 5. Draw Active Trajectory
+    if (proj.currentPath.length > 0) {
+        ctxProj.save();
+        ctxProj.strokeStyle = 'var(--m5-color)';
+        ctxProj.shadowColor = 'rgba(168, 85, 247, 0.5)';
+        ctxProj.shadowBlur = 10;
+        ctxProj.lineWidth = 3;
+        ctxProj.beginPath();
+        proj.currentPath.forEach((pt, idx) => {
+            const sx = xLaunch + pt.x * currentScale;
+            const sy = yFloor - pt.y * currentScale;
+            if (idx === 0) ctxProj.moveTo(sx, sy);
+            else ctxProj.lineTo(sx, sy);
+        });
+        ctxProj.stroke();
+        ctxProj.restore();
+    }
+    
+    // 6. Draw Premium Cannon Launcher at (0, launchHeight)
+    const cannonY = yFloor - proj.height * currentScale;
+    ctxProj.save();
+    ctxProj.translate(xLaunch, cannonY);
+    
+    // Turret base flange
+    ctxProj.fillStyle = '#475569';
+    ctxProj.beginPath();
+    ctxProj.arc(0, 0, 12, 0, 2 * Math.PI);
+    ctxProj.fill();
+    ctxProj.strokeStyle = '#64748b';
+    ctxProj.lineWidth = 1.5;
+    ctxProj.stroke();
+    
+    // Radial bolts on base plate
+    ctxProj.fillStyle = '#cbd5e1';
+    for (let a = 0; a < 2 * Math.PI; a += Math.PI / 4) {
+        ctxProj.beginPath();
+        ctxProj.arc(9 * Math.cos(a), 9 * Math.sin(a), 1.2, 0, 2 * Math.PI);
+        ctxProj.fill();
+    }
+    
+    // Girder truss structure support (height column)
+    if (proj.height > 0) {
+        const hPix = proj.height * currentScale;
+        ctxProj.fillStyle = '#1e293b';
+        ctxProj.fillRect(-5, 0, 10, hPix);
+        
+        // Steel rails
+        ctxProj.fillStyle = '#475569';
+        ctxProj.fillRect(-6, 0, 2, hPix);
+        ctxProj.fillRect(4, 0, 2, hPix);
+        
+        // Cross girders
+        ctxProj.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+        ctxProj.lineWidth = 1.2;
+        ctxProj.beginPath();
+        const step = 15;
+        for (let y = 0; y < hPix; y += step) {
+            const nextY = Math.min(hPix, y + step);
+            ctxProj.moveTo(-5, y);
+            ctxProj.lineTo(5, nextY);
+            ctxProj.moveTo(5, y);
+            ctxProj.lineTo(-5, nextY);
+        }
+        ctxProj.stroke();
+    }
+    
+    // Barrel
+    ctxProj.save();
+    ctxProj.rotate(-angleRad);
+    
+    // Pivot collar joint
+    ctxProj.fillStyle = '#1e293b';
+    ctxProj.fillRect(-4, -8, 8, 16);
+    ctxProj.strokeStyle = 'var(--m5-color)';
+    ctxProj.lineWidth = 1;
+    ctxProj.strokeRect(-4, -8, 8, 16);
+    
+    // Metal barrel gradient
+    const barrelGrad = ctxProj.createLinearGradient(0, -6, 0, 6);
+    barrelGrad.addColorStop(0, '#334155');
+    barrelGrad.addColorStop(0.3, '#64748b');
+    barrelGrad.addColorStop(0.7, '#334155');
+    barrelGrad.addColorStop(1, '#1e293b');
+    
+    ctxProj.fillStyle = barrelGrad;
+    ctxProj.fillRect(0, -6, 28, 12);
+    
+    // Glowing laser guide stripe
+    ctxProj.fillStyle = '#c084fc';
+    ctxProj.fillRect(4, -1.5, 18, 3);
+    
+    // Heavy muzzle collar at tip
+    ctxProj.fillStyle = '#1e293b';
+    ctxProj.fillRect(28, -7, 4, 14);
+    ctxProj.fillStyle = '#c084fc';
+    ctxProj.fillRect(30, -6, 1, 12);
+    
+    ctxProj.restore();
+    
+    // Center bolt pin
+    ctxProj.fillStyle = '#cbd5e1';
+    ctxProj.beginPath();
+    ctxProj.arc(0, 0, 4, 0, 2 * Math.PI);
+    ctxProj.fill();
+    ctxProj.restore();
+    
+    // 7. Draw Projectile & Vectors
+    const px = xLaunch + proj.x * currentScale;
+    const py = yFloor - proj.y * currentScale;
+    
+    ctxProj.save();
+    ctxProj.fillStyle = 'var(--m5-color)';
+    ctxProj.shadowColor = 'rgba(168, 85, 247, 0.8)';
+    ctxProj.shadowBlur = 12;
+    ctxProj.beginPath();
+    ctxProj.arc(px, py, 6, 0, 2 * Math.PI);
+    ctxProj.fill();
+    ctxProj.strokeStyle = '#ffffff';
+    ctxProj.lineWidth = 1;
+    ctxProj.stroke();
+    ctxProj.restore();
+    
+    if (proj.isFlying) {
+        const v = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
+        
+        if (v > 0.1) {
+            const vectorScale = 1.5;
+            
+            // Velocity vector
+            ctxProj.save();
+            ctxProj.strokeStyle = 'var(--m5-color)';
+            ctxProj.lineWidth = 2.5;
+            ctxProj.lineCap = 'round';
+            ctxProj.beginPath();
+            ctxProj.moveTo(px, py);
+            ctxProj.lineTo(px + proj.vx * vectorScale, py - proj.vy * vectorScale);
+            ctxProj.stroke();
+            
+            const angleVal = Math.atan2(-proj.vy, proj.vx);
+            ctxProj.fillStyle = 'var(--m5-color)';
+            ctxProj.beginPath();
+            ctxProj.translate(px + proj.vx * vectorScale, py - proj.vy * vectorScale);
+            ctxProj.rotate(angleVal);
+            ctxProj.moveTo(0, 0);
+            ctxProj.lineTo(-8, -4);
+            ctxProj.lineTo(-6, 0);
+            ctxProj.lineTo(-8, 4);
+            ctxProj.closePath();
+            ctxProj.fill();
+            ctxProj.restore();
+            
+            // Component vectors
+            ctxProj.save();
+            ctxProj.strokeStyle = 'var(--accent-cyan)';
+            ctxProj.lineWidth = 1.5;
+            ctxProj.setLineDash([2, 2]);
+            
+            ctxProj.beginPath();
+            ctxProj.moveTo(px, py);
+            ctxProj.lineTo(px + proj.vx * vectorScale, py);
+            ctxProj.stroke();
+            
+            ctxProj.beginPath();
+            ctxProj.moveTo(px + proj.vx * vectorScale, py);
+            ctxProj.lineTo(px + proj.vx * vectorScale, py - proj.vy * vectorScale);
+            ctxProj.stroke();
+            
+            ctxProj.restore();
+            
+            // Labels
+            ctxProj.font = '600 10px JetBrains Mono, monospace';
+            ctxProj.fillStyle = 'var(--accent-cyan)';
+            ctxProj.textAlign = 'center';
+            ctxProj.fillText(`vx: ${proj.vx.toFixed(1)}m/s`, px + (proj.vx * vectorScale) / 2, py + 12);
+            ctxProj.fillText(`vy: ${proj.vy.toFixed(1)}m/s`, px + proj.vx * vectorScale + 25, py - (proj.vy * vectorScale) / 2);
+        }
+    }
+}
+
+function resetProjectile() {
+    const proj = state.projectile;
+    proj.isFlying = false;
+    proj.isPaused = false;
+    proj.x = 0;
+    proj.y = proj.height;
+    proj.time = 0;
+    
+    // Reset zoomMode back to auto-scale on reset
+    proj.zoomMode = 'auto';
+    
+    const angleRad = proj.angle * Math.PI / 180;
+    proj.vx = proj.speed * Math.cos(angleRad);
+    proj.vy = proj.speed * Math.sin(angleRad);
+    
+    // Store initial velocities for SUVAT HUD
+    proj.initialUx = proj.vx;
+    proj.initialUy = proj.vy;
+    
+    proj.maxHeight = proj.height;
+    proj.currentPath = [{ x: proj.x, y: proj.y }];
+    
+    updateProjectileUI();
+    drawProjectileSimulation();
+    
+    DOM.launchBtn.querySelector('span').textContent = 'LAUNCH';
+    DOM.launchBtn.style.background = 'rgba(168, 85, 247, 0.1)';
+    DOM.launchBtn.style.color = 'var(--m5-color)';
+    DOM.pauseBtnProj.classList.add('paused');
+    DOM.pauseBtnProj.querySelector('span').textContent = 'PAUSE';
+    
+    // Reset pause button styling
+    DOM.pauseBtnProj.style.color = '#f59e0b';
+    DOM.pauseBtnProj.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+}
+
+function launchProjectile() {
+    const proj = state.projectile;
+    if (proj.isFlying) return;
+    
+    playLaunchSound();
+    
+    proj.isFlying = true;
+    proj.isPaused = false;
+    proj.x = 0;
+    proj.y = proj.height;
+    proj.time = 0;
+    
+    const angleRad = proj.angle * Math.PI / 180;
+    proj.vx = proj.speed * Math.cos(angleRad);
+    proj.vy = proj.speed * Math.sin(angleRad);
+    
+    // Store initial velocities for SUVAT HUD
+    proj.initialUx = proj.vx;
+    proj.initialUy = proj.vy;
+    
+    proj.maxHeight = proj.height;
+    proj.currentPath = [{ x: proj.x, y: proj.y }];
+    proj.lastFrameTime = 0;
+    
+    DOM.launchBtn.querySelector('span').textContent = 'FIRING...';
+    DOM.launchBtn.style.background = 'rgba(168, 85, 247, 0.25)';
+    DOM.pauseBtnProj.classList.remove('paused');
+    DOM.pauseBtnProj.querySelector('span').textContent = 'PAUSE';
+    
+    // Reset pause button styling
+    DOM.pauseBtnProj.style.color = '#f59e0b';
+    DOM.pauseBtnProj.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+    
+    updateProjectileUI();
+}
+
+function updateProjectileUI() {
+    const proj = state.projectile;
+    
+    DOM.sliderProjAngle.value = proj.angle;
+    DOM.valProjAngle.innerHTML = `${proj.angle}&deg;`;
+    
+    DOM.sliderProjSpeed.value = proj.speed;
+    DOM.valProjSpeed.textContent = `${proj.speed} m/s`;
+    
+    DOM.sliderProjHeight.value = proj.height;
+    DOM.valProjHeight.textContent = `${proj.height.toFixed(1)} m`;
+    
+    DOM.sliderProjMass.value = proj.mass;
+    DOM.valProjMass.textContent = `${proj.mass.toFixed(1)} kg`;
+    
+    DOM.sliderProjDrag.value = proj.dragCoeff;
+    DOM.valProjDrag.textContent = proj.dragCoeff.toFixed(2);
+    
+    DOM.airResToggle.checked = proj.airResistanceEnabled;
+    DOM.gridToggle.checked = proj.gridEnabled;
+    
+    if (proj.airResistanceEnabled) {
+        DOM.airResPanel.style.display = 'flex';
+        DOM.airResBadge.classList.add('active');
+        DOM.airResBadge.querySelector('strong').style.color = '#10b981';
+        DOM.airResText.textContent = "ON";
+    } else {
+        DOM.airResPanel.style.display = 'none';
+        DOM.airResBadge.classList.remove('active');
+        DOM.airResBadge.querySelector('strong').style.color = '#ef4444';
+        DOM.airResText.textContent = "OFF";
+    }
+    
+    DOM.rangeReadoutBadge.textContent = `${proj.x.toFixed(1)} m`;
+    DOM.heightReadoutBadge.textContent = `${proj.y.toFixed(1)} m`;
+    
+    DOM.telemetryRange.innerHTML = `R = ${proj.x.toFixed(2)} <span style="font-size: 0.95rem; font-weight:500;">m</span>`;
+    DOM.telemetryHeight.textContent = `${proj.maxHeight.toFixed(2)} m`;
+    DOM.telemetryTime.textContent = `${proj.time.toFixed(2)} s`;
+    DOM.telemetryVelocity.textContent = `(${proj.vx.toFixed(2)}, ${proj.vy.toFixed(2)}) m/s`;
+    
+    // Sync the HUD overlay fields
+    updateSuvatHUD();
+}
+
+function updateSuvatHUD() {
+    const proj = state.projectile;
+    if (!DOM.suvatS) return;
+    
+    // S (displacement components)
+    DOM.suvatS.textContent = `x: ${proj.x.toFixed(2)}, y: ${proj.y.toFixed(2)} m`;
+    
+    // U (initial velocity components)
+    DOM.suvatU.innerHTML = `u<sub>x</sub>: ${proj.initialUx.toFixed(2)}, u<sub>y</sub>: ${proj.initialUy.toFixed(2)} m/s`;
+    
+    // V (current velocity components)
+    DOM.suvatV.innerHTML = `v<sub>x</sub>: ${proj.vx.toFixed(2)}, v<sub>y</sub>: ${proj.vy.toFixed(2)} m/s`;
+    
+    // A (acceleration components, resolving gravity + drag forces)
+    const g = 9.81;
+    let ax = 0;
+    let ay = -g;
+    
+    if (proj.airResistanceEnabled) {
+        const v = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
+        const dragConst = 0.5 * 1.2 * proj.dragCoeff * 0.05;
+        if (v > 0.001) {
+            ax = -(dragConst * v * proj.vx) / proj.mass;
+            ay = -g - (dragConst * v * proj.vy) / proj.mass;
+        }
+    }
+    
+    DOM.suvatA.innerHTML = `a<sub>x</sub>: ${ax.toFixed(2)}, a<sub>y</sub>: ${ay.toFixed(2)} m/s²`;
+    
+    // T (elapsed flight time)
+    DOM.suvatT.textContent = `t: ${proj.time.toFixed(2)} s`;
+}
+
+function updateTrialsTable() {
+    const proj = state.projectile;
+    if (!DOM.trialsTableBody) return;
+    
+    DOM.trialsTableBody.innerHTML = '';
+    
+    if (proj.trials.length === 0) {
+        DOM.trialsTableBody.innerHTML = '<tr class="empty-log-row"><td colspan="5" style="text-align: center; color: var(--text-muted); font-style: italic;">No launches yet.</td></tr>';
+        return;
+    }
+    
+    const reversedTrials = [...proj.trials].reverse();
+    reversedTrials.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.className = 'row-mass';
+        tr.innerHTML = `
+            <td class="mono font-bold" style="color: var(--m5-color);">#${t.num}</td>
+            <td class="mono">${t.angle}&deg;</td>
+            <td class="mono">${t.speed} m/s</td>
+            <td class="mono">${t.height.toFixed(1)} m</td>
+            <td class="mono highlighted">${t.range.toFixed(2)} m</td>
+        `;
+        DOM.trialsTableBody.appendChild(tr);
+    });
+}
+
+function projTick(timestamp) {
+    if (state.activeView !== 'projectile') return;
+    
+    const proj = state.projectile;
+    if (!proj.lastFrameTime) proj.lastFrameTime = timestamp;
+    const dtReal = (timestamp - proj.lastFrameTime) / 1000.0;
+    proj.lastFrameTime = timestamp;
+    
+    const dt = Math.min(0.08, dtReal * state.simSpeed);
+    
+    if (proj.isFlying && !proj.isPaused) {
+        const g = 9.81;
+        let ax = 0;
+        let ay = -g;
+        
+        if (proj.airResistanceEnabled) {
+            const v = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
+            const dragConst = 0.5 * 1.2 * proj.dragCoeff * 0.05; // Simplified Cd coefficient scaling
+            
+            if (v > 0.001) {
+                const decelX = -(dragConst * v * proj.vx) / proj.mass;
+                const decelY = -(dragConst * v * proj.vy) / proj.mass;
+                ax += decelX;
+                ay += decelY;
+            }
+        }
+        
+        proj.vx += ax * dt;
+        proj.vy += ay * dt;
+        proj.x += proj.vx * dt;
+        proj.y += proj.vy * dt;
+        proj.time += dt;
+        
+        proj.currentPath.push({ x: proj.x, y: proj.y });
+        
+        if (proj.y > proj.maxHeight) {
+            proj.maxHeight = proj.y;
+        }
+        
+        if (proj.y <= 0) {
+            proj.y = 0;
+            proj.isFlying = false;
+            
+            playLandingSound();
+            
+            const trialNum = proj.trials.length + 1;
+            proj.trials.push({
+                num: trialNum,
+                angle: proj.angle,
+                speed: proj.speed,
+                height: proj.height,
+                range: proj.x,
+                maxH: proj.maxHeight,
+                airRes: proj.airResistanceEnabled ? `Cd=${proj.dragCoeff.toFixed(2)}` : 'OFF'
+            });
+            
+            proj.ghostPaths.push([...proj.currentPath]);
+            if (proj.ghostPaths.length > 3) {
+                proj.ghostPaths.shift();
+            }
+            
+            updateTrialsTable();
+            
+            DOM.launchBtn.querySelector('span').textContent = 'LAUNCH';
+            DOM.launchBtn.style.background = 'rgba(168, 85, 247, 0.1)';
+            DOM.launchBtn.style.color = 'var(--m5-color)';
+            DOM.pauseBtnProj.classList.add('paused');
+            DOM.pauseBtnProj.querySelector('span').textContent = 'PAUSE';
+            
+            showNotification(`Projectile landed! Range: ${proj.x.toFixed(1)} m`);
+        }
+        
+        updateProjectileUI();
+    }
+    
+    drawProjectileSimulation();
+    requestAnimationFrame(projTick);
+}
+
 // --- SIMULATION PHYSICS INTEGRATOR ---
 function simTick(timestamp) {
     if (!state.lastFrameTime) state.lastFrameTime = timestamp;
@@ -980,7 +1690,11 @@ function navigateToHome() {
     state.activeView = 'home';
     state.isPlaying = false;
     
+    // Pause projectile flight if active
+    state.projectile.isFlying = false;
+    
     DOM.simView.style.display = 'none';
+    DOM.projectileView.style.display = 'none';
     DOM.homeView.style.display = 'flex';
     
     updateEngineHum();
@@ -989,8 +1703,10 @@ function navigateToHome() {
 function navigateToSim() {
     playClickSound();
     state.activeView = 'sim';
+    state.projectile.isFlying = false;
     
     DOM.homeView.style.display = 'none';
+    DOM.projectileView.style.display = 'none';
     DOM.simView.style.display = 'grid';
     
     // Unmute prompt for sound on navigation gesture
@@ -1006,6 +1722,27 @@ function navigateToSim() {
     // Start animation frames loop
     state.lastFrameTime = 0;
     requestAnimationFrame(simTick);
+}
+
+function navigateToProjectileSim() {
+    playClickSound();
+    state.activeView = 'projectile';
+    state.isPlaying = false;
+    
+    DOM.homeView.style.display = 'none';
+    DOM.simView.style.display = 'none';
+    DOM.projectileView.style.display = 'grid';
+    
+    initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    
+    resizeCanvasProj();
+    resetProjectile();
+    
+    state.projectile.lastFrameTime = 0;
+    requestAnimationFrame(projTick);
 }
 
 // --- SYSTEM EVENT LISTENERS AND BINDINGS ---
@@ -1198,12 +1935,183 @@ function setupEventListeners() {
         calculatePhysics();
     });
 
-    // Window resizing canvas handler
-    window.addEventListener('resize', () => {
-        if (state.activeView === 'sim') {
-            resizeCanvas();
-            drawSimulation();
+    // Setup ResizeObservers for canvas parent containers to handle responsive resizing seamlessly
+    if (DOM.canvas && DOM.canvas.parentNode) {
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(() => {
+                resizeCanvas();
+                if (state.activeView === 'sim') {
+                    drawSimulation();
+                }
+            });
+        });
+        resizeObserver.observe(DOM.canvas.parentNode);
+    }
+
+    if (DOM.canvasProj && DOM.canvasProj.parentNode) {
+        const resizeObserverProj = new ResizeObserver(() => {
+            requestAnimationFrame(() => {
+                resizeCanvasProj();
+                if (state.activeView === 'projectile') {
+                    drawProjectileSimulation();
+                }
+            });
+        });
+        resizeObserverProj.observe(DOM.canvasProj.parentNode);
+    }
+
+    // === PROJECTILE MOTION EVENT LISTENERS ===
+    // Navigation
+    DOM.cardProjectileSim.addEventListener('click', navigateToProjectileSim);
+    DOM.homeBtnProj.addEventListener('click', navigateToHome);
+    
+    // Sliders
+    DOM.sliderProjAngle.addEventListener('input', (e) => {
+        state.projectile.angle = parseInt(e.target.value);
+        resetProjectile();
+    });
+    DOM.sliderProjSpeed.addEventListener('input', (e) => {
+        state.projectile.speed = parseFloat(e.target.value);
+        resetProjectile();
+    });
+    DOM.sliderProjHeight.addEventListener('input', (e) => {
+        state.projectile.height = parseFloat(e.target.value);
+        resetProjectile();
+    });
+    DOM.sliderProjMass.addEventListener('input', (e) => {
+        state.projectile.mass = parseFloat(e.target.value);
+        updateProjectileUI();
+    });
+    DOM.sliderProjDrag.addEventListener('input', (e) => {
+        state.projectile.dragCoeff = parseFloat(e.target.value);
+        updateProjectileUI();
+    });
+    
+    // Zoom Slider HUD listeners
+    if (DOM.zoomSlider) {
+        DOM.zoomSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            state.projectile.zoomMode = 'manual';
+            state.projectile.manualScale = val / 2.5;
+            drawProjectileSimulation();
+        });
+    }
+    
+    if (DOM.zoomInBtn) {
+        DOM.zoomInBtn.addEventListener('click', () => {
+            playClickSound();
+            const proj = state.projectile;
+            proj.zoomMode = 'manual';
+            proj.manualScale = Math.min(40.0, proj.scale * 1.15);
+            if (DOM.zoomSlider) {
+                DOM.zoomSlider.value = Math.round(proj.manualScale * 2.5);
+            }
+            drawProjectileSimulation();
+        });
+    }
+    
+    if (DOM.zoomOutBtn) {
+        DOM.zoomOutBtn.addEventListener('click', () => {
+            playClickSound();
+            const proj = state.projectile;
+            proj.zoomMode = 'manual';
+            proj.manualScale = Math.max(1.0, proj.scale * 0.85);
+            if (DOM.zoomSlider) {
+                DOM.zoomSlider.value = Math.round(proj.manualScale * 2.5);
+            }
+            drawProjectileSimulation();
+        });
+    }
+    
+    // Toggles
+    DOM.airResToggle.addEventListener('change', (e) => {
+        state.projectile.airResistanceEnabled = e.target.checked;
+        playBeepSound(state.projectile.airResistanceEnabled ? 440 : 220, 0.12, 'sine');
+        updateProjectileUI();
+        drawProjectileSimulation();
+    });
+    DOM.gridToggle.addEventListener('change', (e) => {
+        state.projectile.gridEnabled = e.target.checked;
+        drawProjectileSimulation();
+    });
+    
+    // Simulation controls
+    DOM.launchBtn.addEventListener('click', () => {
+        const proj = state.projectile;
+        if (!proj.isFlying) {
+            launchProjectile();
+        } else {
+            resetProjectile();
+            setTimeout(launchProjectile, 50);
         }
+    });
+    
+    DOM.pauseBtnProj.addEventListener('click', () => {
+        const proj = state.projectile;
+        if (proj.isFlying) {
+            playClickSound();
+            proj.isPaused = !proj.isPaused;
+            DOM.pauseBtnProj.querySelector('span').textContent = proj.isPaused ? 'RESUME' : 'PAUSE';
+            if (proj.isPaused) {
+                DOM.pauseBtnProj.style.color = '#10b981';
+                DOM.pauseBtnProj.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            } else {
+                DOM.pauseBtnProj.style.color = '#f59e0b';
+                DOM.pauseBtnProj.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+            }
+        }
+    });
+    
+    DOM.resetBtnProj.addEventListener('click', () => {
+        playBeepSound(150, 0.15, 'sawtooth');
+        resetProjectile();
+        state.projectile.ghostPaths = [];
+        state.projectile.trials = [];
+        updateTrialsTable();
+        drawProjectileSimulation();
+        showNotification("Simulation reset: trails cleared");
+    });
+    
+    // Header actions
+    DOM.soundBtnProj.addEventListener('click', () => {
+        state.isMuted = !state.isMuted;
+        playClickSound();
+        
+        const paths = [DOM.soundBtn.querySelector('path'), DOM.soundBtnProj.querySelector('path')];
+        const buttons = [DOM.soundBtn, DOM.soundBtnProj];
+        
+        paths.forEach((path, idx) => {
+            if (!path) return;
+            const btn = buttons[idx];
+            if (state.isMuted) {
+                path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z');
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.color = 'var(--text-secondary)';
+                if (humGainNode) humGainNode.gain.value = 0;
+            } else {
+                path.setAttribute('d', 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z');
+                btn.style.borderColor = 'var(--accent-cyan)';
+                btn.style.color = 'var(--text-primary)';
+                initAudio();
+                updateEngineHum();
+            }
+        });
+    });
+    
+    DOM.helpBtnProj.addEventListener('click', () => {
+        playClickSound();
+        DOM.projectileHelpModal.classList.add('active');
+    });
+    
+    const closeHelpProj = () => {
+        playClickSound();
+        DOM.projectileHelpModal.classList.remove('active');
+    };
+    DOM.closeHelpBtnProj.addEventListener('click', closeHelpProj);
+    DOM.closeHelpBtnOkProj.addEventListener('click', closeHelpProj);
+    
+    DOM.projectileHelpModal.addEventListener('click', (e) => {
+        if (e.target === DOM.projectileHelpModal) closeHelpProj();
     });
 }
 
@@ -1265,11 +2173,20 @@ function init() {
     navigateToHome();
 
     // Muted icon sync
-    const path = DOM.soundBtn.querySelector('path');
-    if (state.isMuted && path) {
-        path.setAttribute('d', 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z');
-        DOM.soundBtn.style.borderColor = 'var(--border-color)';
-        DOM.soundBtn.style.color = 'var(--text-secondary)';
+    if (state.isMuted) {
+        const path = DOM.soundBtn.querySelector('path');
+        const pathProj = DOM.soundBtnProj.querySelector('path');
+        const mutePath = 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z';
+        if (path) {
+            path.setAttribute('d', mutePath);
+            DOM.soundBtn.style.borderColor = 'var(--border-color)';
+            DOM.soundBtn.style.color = 'var(--text-secondary)';
+        }
+        if (pathProj) {
+            pathProj.setAttribute('d', mutePath);
+            DOM.soundBtnProj.style.borderColor = 'var(--border-color)';
+            DOM.soundBtnProj.style.color = 'var(--text-secondary)';
+        }
     }
 }
 
