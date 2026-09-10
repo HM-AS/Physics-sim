@@ -3,7 +3,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    user-select: none;
+
 }
 
 :root {
@@ -1719,7 +1719,7 @@ input:checked + .slider-toggle:before {
 /* 2. Mobile / Small Screens (max-width: 768px) */
 @media (max-width: 768px) {
     .dashboard {
-        display: flex !important;
+        display: flex;
         flex-direction: column !important;
         height: auto !important;
         min-height: 100vh;
@@ -1836,3 +1836,48 @@ input:checked + .slider-toggle:before {
         padding: 4px 8px !important;
     }
 }
+
+
+/* Layout and accessibility refinements */
+:root { color-scheme: dark; --text-muted: #8b9ab2; }
+:focus-visible { outline: 3px solid #22d3ee; outline-offset: 4px; }
+button, input, [role="button"] { touch-action: manipulation; }
+button { font: inherit; }
+.dashboard > *, .canvas-container { min-width: 0; min-height: 0; }
+.home-container { min-height: 100dvh; height: auto; }
+body { overflow-y: auto; width: 100%; }
+.home-header { flex-shrink: 0; }
+.hero-section { margin: 24px 0 44px; }
+.hero-title { font-size: clamp(2rem, 4.6vw, 4rem); line-height: 1.08; letter-spacing: -.045em; }
+.hero-subtitle { max-width: 640px; margin: auto; }
+.sims-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 1060px; gap: 24px; }
+.sim-card { transition: transform .2s, border-color .2s, box-shadow .2s; }
+.card-info { padding: 24px; }
+.sim-desc { line-height: 1.65; }
+.locked-sim { cursor: default; opacity: .65; }
+.locked-sim:hover { transform: none; box-shadow: none; border-color: var(--border-color); }
+.modal-card { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.stat-number, .suvat-val, .canvas-badge { font-variant-numeric: tabular-nums; }
+@media (min-width: 1025px) and (max-width: 1350px) {
+    .dashboard { grid-template-columns: 260px minmax(0, 1fr) 290px; }
+    .sidebar { padding: 16px; }
+}
+@media (max-width: 768px) {
+    .dashboard[style*="display: none"] { display: none !important; }
+    .home-container { width: 100%; }
+    .sims-grid { grid-template-columns: 1fr; }
+    .main-canvas-area { flex-shrink: 0; }
+    .hero-section { margin: 16px 0 32px; text-align: left; }
+    .header-tag { font-size: .65rem; letter-spacing: .12em; }
+    .friction-status-badge { top: 42px !important; left: 10px; right: auto !important; }
+    .icon-btn, .mass-adjust-btn { min-width: 40px; min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 768px) {
+    .dashboard { display: flex !important; }
+    .dashboard[style*="display: none"] { display: none !important; }
+}
+.table-container { overflow-x: auto; }
+.data-table th, .data-table td { padding: 10px 8px; }

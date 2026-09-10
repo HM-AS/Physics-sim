@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="labs.css">
+    <meta name="description" content="Six interactive physics labs: forces, projectile motion, gravitational fields, circuits, wave superposition, and simple harmonic motion.">
 </head>
 <body>
 
@@ -23,13 +25,13 @@
                 </svg>
                 <span>PhysicSim <strong>HD</strong></span>
             </div>
-            <div class="header-tag">DIGITAL PHYSICAL LABORATORY</div>
+            <div class="header-tag">THE INTERACTIVE PHYSICS LAB</div>
         </header>
 
         <!-- Hero Welcome Section -->
         <section class="hero-section">
-            <h1 class="hero-title">High-Definition Physics Simulators</h1>
-            <p class="hero-subtitle">Interactive visual workspaces mapped to IB Physics and AP Physics syllabus guidelines. Explore classical mechanics, electromagnetism, and thermodynamics.</p>
+            <h1 class="hero-title">Physics you can put in motion.</h1>
+            <p class="hero-subtitle">Change a variable. Follow the forces. Explore connected masses and projectile motion with interactive experiments and live measurements.</p>
         </section>
 
         <!-- Simulators Grid Layout -->
@@ -667,12 +669,12 @@
                     </svg>
                 </div>
                 <h3 style="text-align: center; border-left: none; padding-left: 0; margin-bottom: 12px; font-size: 1.1rem; color: #ffffff;">Your Interactive Digital Physics Lab</h3>
-                <p>Welcome! You are launching the **Multi-Mass Tension Visualizer**, designed in accordance with syllabus standards (e.g. IB Physics A.2 - Forces and Momentum).</p>
+                <p>Welcome! You are launching the <strong>Multi-Mass Tension Visualizer</strong>, designed in accordance with syllabus standards (e.g. IB Physics A.2 - Forces and Momentum).</p>
                 
                 <div class="formula-block" style="background: rgba(6,182,212,0.03); border-color: rgba(6,182,212,0.15);">
                     <h4 style="color: var(--accent-cyan); font-weight: 700; margin-bottom: 6px; font-size: 0.8rem; text-transform: uppercase;">Simulation Objectives:</h4>
                     <ul style="padding-left: 14px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px;">
-                        <li><strong>Overcome Friction:</strong> Set applied force F greater than static friction threshold $f_{s,\max} = \mu_s N$ to trigger sliding.</li>
+                        <li><strong>Overcome Friction:</strong> Set applied force F greater than static friction threshold f<sub>s,max</sub> = μ<sub>s</sub>N to trigger sliding.</li>
                         <li><strong>Newton's First Law:</strong> Balance forces (Applied Force = Kinetic Friction) while sliding to see constant speed velocity persistence.</li>
                         <li><strong>Observe Tension Scaling:</strong> Verify that rope tensions decrease from front to back, pulling only the masses behind them.</li>
                     </ul>
@@ -682,7 +684,7 @@
                 <ul style="font-size: 0.85rem;">
                     <li><strong>[+ Block] & [- Block]:</strong> Dynamically add/remove mass blocks from the system.</li>
                     <li><strong>Interactive Knob:</strong> Grab and spin the force knob to control the applied pulling force.</li>
-                    <li><strong>Dual Friction:</strong> Independently adjust Static ($\mu_s$) and Kinetic ($\mu_k$) coefficients.</li>
+                    <li><strong>Dual Friction:</strong> Independently adjust Static (μ<sub>s</sub>) and Kinetic (μ<sub>k</sub>) coefficients.</li>
                 </ul>
             </div>
             <div class="modal-footer">
@@ -730,5 +732,7 @@
 
     <!-- Script loading -->
     <script src="app.js"></script>
+    <script src="physics-models.js"></script>
+    <script src="labs.js"></script>
 </body>
 </html>

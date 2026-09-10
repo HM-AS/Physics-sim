@@ -362,7 +362,7 @@ function buildMassSliders() {
                 <span class="mass-name">M${id}</span>
             </div>
             <div class="vertical-slider-wrapper">
-                <input type="range" class="vertical-slider" min="0.5" max="5.0" step="0.1" value="${val}" data-idx="${idx}">
+                <input type="range" class="vertical-slider" aria-label="Mass ${id} in kilograms" min="0.5" max="5.0" step="0.1" value="${val}" data-idx="${idx}">
             </div>
             <div class="mass-value-badge">${val.toFixed(1)} kg</div>
         `;
@@ -472,6 +472,7 @@ function calculatePhysics() {
     
     // 4. Update UI readouts
     updateUIElements();
+    if (state.activeView === 'sim') drawSimulation();
 }
 
 // --- UI SYNC UPDATER ---
@@ -497,7 +498,7 @@ function updateUIElements() {
     
     // Net Force widget display
     const forceDisplay = state.frictionEnabled ? state.netForce : state.appliedForce;
-    DOM.lblNetForce.textContent = `${Math.max(0, forceDisplay).toFixed(1)} N`;
+    DOM.lblNetForce.textContent = `${forceDisplay.toFixed(1)} N`;
     
     // Synchronize inputs
     DOM.forceSlider.value = state.appliedForce;
@@ -957,7 +958,11 @@ function drawSimulation() {
         if (idx < N - 1) totalChainWidth += ropeLength;
     });
     
-    const chainStart = (canvasWidth - totalChainWidth) / 2;
+    const fitScale = Math.min(1, (canvasWidth - 32) / (totalChainWidth + 240));
+    ctx.save();
+    ctx.translate(16, floorY * (1 - fitScale));
+    ctx.scale(fitScale, fitScale);
+    const chainStart = ((canvasWidth - 32) / fitScale - totalChainWidth - 220) / 2;
     
     const blockX = [];
     let currentX = chainStart;
@@ -999,7 +1004,7 @@ function drawSimulation() {
         
         // Tension text overlay
         ctx.font = '700 11px JetBrains Mono, monospace';
-        ctx.fillStyle = ratio > 0.3 ? 'var(--accent-cyan)' : '#475569';
+        ctx.fillStyle = ratio > 0.3 ? '#06b6d4' : '#475569';
         ctx.textAlign = 'center';
         ctx.fillText(`T${i+1}: ${tension.toFixed(1)}N`, (xStart + xEnd)/2, (yStart + yEnd)/2 - 10);
     }
@@ -1055,6 +1060,7 @@ function drawSimulation() {
         ctx.textAlign = 'left';
         ctx.fillText(`F: ${state.appliedForce.toFixed(1)} N`, xEnd + 8, yEnd + 4);
     }
+    ctx.restore();
 }
 
 // --- PROJECTILE MOTION SIMULATOR FUNCTIONS ---
@@ -1107,7 +1113,7 @@ function drawProjectileSimulation() {
         const targetScaleY = (yFloor - padY) / Math.max(5, hMaxEst);
         
         currentScale = Math.min(targetScaleX, targetScaleY);
-        currentScale = Math.max(2.0, Math.min(30.0, currentScale));
+        currentScale = Math.max(0.05, Math.min(30.0, currentScale));
         proj.scale = currentScale;
         
         // Update Zoom HUD slider value (maps scale to range 5 to 100)
@@ -1147,7 +1153,7 @@ function drawProjectileSimulation() {
             
             // X label ticks
             ctxProj.font = '500 10px JetBrains Mono, monospace';
-            ctxProj.fillStyle = 'var(--text-muted)';
+            ctxProj.fillStyle = '#64748b';
             ctxProj.textAlign = 'center';
             ctxProj.fillText(`${m}m`, x, yFloor + 18);
         }
@@ -1162,7 +1168,7 @@ function drawProjectileSimulation() {
             
             // Y label ticks
             ctxProj.font = '500 10px JetBrains Mono, monospace';
-            ctxProj.fillStyle = 'var(--text-muted)';
+            ctxProj.fillStyle = '#64748b';
             ctxProj.textAlign = 'right';
             ctxProj.fillText(`${m}m`, xLaunch - 8, y + 4);
         }
@@ -1205,7 +1211,7 @@ function drawProjectileSimulation() {
     // 5. Draw Active Trajectory
     if (proj.currentPath.length > 0) {
         ctxProj.save();
-        ctxProj.strokeStyle = 'var(--m5-color)';
+        ctxProj.strokeStyle = '#a855f7';
         ctxProj.shadowColor = 'rgba(168, 85, 247, 0.5)';
         ctxProj.shadowBlur = 10;
         ctxProj.lineWidth = 3;
@@ -1275,7 +1281,7 @@ function drawProjectileSimulation() {
     // Pivot collar joint
     ctxProj.fillStyle = '#1e293b';
     ctxProj.fillRect(-4, -8, 8, 16);
-    ctxProj.strokeStyle = 'var(--m5-color)';
+    ctxProj.strokeStyle = '#a855f7';
     ctxProj.lineWidth = 1;
     ctxProj.strokeRect(-4, -8, 8, 16);
     
@@ -1313,7 +1319,7 @@ function drawProjectileSimulation() {
     const py = yFloor - proj.y * currentScale;
     
     ctxProj.save();
-    ctxProj.fillStyle = 'var(--m5-color)';
+    ctxProj.fillStyle = '#a855f7';
     ctxProj.shadowColor = 'rgba(168, 85, 247, 0.8)';
     ctxProj.shadowBlur = 12;
     ctxProj.beginPath();
@@ -1332,7 +1338,7 @@ function drawProjectileSimulation() {
             
             // Velocity vector
             ctxProj.save();
-            ctxProj.strokeStyle = 'var(--m5-color)';
+            ctxProj.strokeStyle = '#a855f7';
             ctxProj.lineWidth = 2.5;
             ctxProj.lineCap = 'round';
             ctxProj.beginPath();
@@ -1341,7 +1347,7 @@ function drawProjectileSimulation() {
             ctxProj.stroke();
             
             const angleVal = Math.atan2(-proj.vy, proj.vx);
-            ctxProj.fillStyle = 'var(--m5-color)';
+            ctxProj.fillStyle = '#a855f7';
             ctxProj.beginPath();
             ctxProj.translate(px + proj.vx * vectorScale, py - proj.vy * vectorScale);
             ctxProj.rotate(angleVal);
@@ -1355,7 +1361,7 @@ function drawProjectileSimulation() {
             
             // Component vectors
             ctxProj.save();
-            ctxProj.strokeStyle = 'var(--accent-cyan)';
+            ctxProj.strokeStyle = '#06b6d4';
             ctxProj.lineWidth = 1.5;
             ctxProj.setLineDash([2, 2]);
             
@@ -1373,7 +1379,7 @@ function drawProjectileSimulation() {
             
             // Labels
             ctxProj.font = '600 10px JetBrains Mono, monospace';
-            ctxProj.fillStyle = 'var(--accent-cyan)';
+            ctxProj.fillStyle = '#06b6d4';
             ctxProj.textAlign = 'center';
             ctxProj.fillText(`vx: ${proj.vx.toFixed(1)}m/s`, px + (proj.vx * vectorScale) / 2, py + 12);
             ctxProj.fillText(`vy: ${proj.vy.toFixed(1)}m/s`, px + proj.vx * vectorScale + 25, py - (proj.vy * vectorScale) / 2);
@@ -1503,7 +1509,7 @@ function updateSuvatHUD() {
     if (!DOM.suvatS) return;
     
     // S (displacement components)
-    DOM.suvatS.textContent = `x: ${proj.x.toFixed(2)}, y: ${proj.y.toFixed(2)} m`;
+    DOM.suvatS.textContent = `x: ${proj.x.toFixed(2)}, y: ${(proj.y - proj.height).toFixed(2)} m`;
     
     // U (initial velocity components)
     DOM.suvatU.innerHTML = `u<sub>x</sub>: ${proj.initialUx.toFixed(2)}, u<sub>y</sub>: ${proj.initialUy.toFixed(2)} m/s`;
@@ -1565,37 +1571,49 @@ function projTick(timestamp) {
     const dtReal = (timestamp - proj.lastFrameTime) / 1000.0;
     proj.lastFrameTime = timestamp;
     
-    const dt = Math.min(0.08, dtReal * state.simSpeed);
+    const dt = document.hidden ? 0 : Math.min(0.08, dtReal * state.simSpeed);
     
     if (proj.isFlying && !proj.isPaused) {
-        const g = 9.81;
-        let ax = 0;
-        let ay = -g;
-        
-        if (proj.airResistanceEnabled) {
-            const v = Math.sqrt(proj.vx * proj.vx + proj.vy * proj.vy);
-            const dragConst = 0.5 * 1.2 * proj.dragCoeff * 0.05; // Simplified Cd coefficient scaling
-            
-            if (v > 0.001) {
-                const decelX = -(dragConst * v * proj.vx) / proj.mass;
-                const decelY = -(dragConst * v * proj.vy) / proj.mass;
-                ax += decelX;
-                ay += decelY;
+        // Small midpoint steps keep quadratic drag stable, even for light masses.
+        let remaining = dt;
+        while (remaining > 1e-9 && proj.isFlying) {
+            let h = Math.min(remaining, 1 / 240);
+            const drag = proj.airResistanceEnabled ? 0.5 * 1.2 * proj.dragCoeff * 0.05 / proj.mass : 0;
+            const acceleration = (vx, vy) => {
+                const speed = Math.hypot(vx, vy);
+                return [-drag * speed * vx, -9.81 - drag * speed * vy];
+            };
+            const [ax, ay] = acceleration(proj.vx, proj.vy);
+            // Resolve the impact time within this step instead of overshooting ground.
+            if (proj.y + proj.vy * h + 0.5 * ay * h * h <= 0) {
+                let low = 0, high = h;
+                for (let i = 0; i < 32; i++) {
+                    const mid = (low + high) / 2;
+                    if (proj.y + proj.vy * mid + 0.5 * ay * mid * mid > 0) low = mid;
+                    else high = mid;
+                }
+                h = high;
             }
+            const mx = proj.vx + ax * h / 2;
+            const my = proj.vy + ay * h / 2;
+            const [midAx, midAy] = acceleration(mx, my);
+            if (proj.vy > 0 && proj.vy + midAy * h < 0) {
+                proj.maxHeight = Math.max(proj.maxHeight, proj.y - proj.vy * proj.vy / (2 * midAy));
+            }
+            proj.x += mx * h;
+            proj.y += my * h;
+            proj.vx += midAx * h;
+            proj.vy += midAy * h;
+            proj.time += h;
+            proj.maxHeight = Math.max(proj.maxHeight, proj.y);
+            remaining -= h;
+            if (proj.y <= 1e-9 && proj.vy <= 0) { proj.y = 0; break; }
         }
-        
-        proj.vx += ax * dt;
-        proj.vy += ay * dt;
-        proj.x += proj.vx * dt;
-        proj.y += proj.vy * dt;
-        proj.time += dt;
-        
         proj.currentPath.push({ x: proj.x, y: proj.y });
-        
-        if (proj.y > proj.maxHeight) {
-            proj.maxHeight = proj.y;
+        if (proj.currentPath.length > 2400) {
+            proj.currentPath = proj.currentPath.filter((_, i) => i % 2 === 0 || i === proj.currentPath.length - 1);
         }
-        
+
         if (proj.y <= 0) {
             proj.y = 0;
             proj.isFlying = false;
@@ -1619,6 +1637,7 @@ function projTick(timestamp) {
             }
             
             updateTrialsTable();
+            drawProjectileSimulation();
             
             DOM.launchBtn.querySelector('span').textContent = 'LAUNCH';
             DOM.launchBtn.style.background = 'rgba(168, 85, 247, 0.1)';
@@ -1632,34 +1651,28 @@ function projTick(timestamp) {
         updateProjectileUI();
     }
     
-    drawProjectileSimulation();
-    requestAnimationFrame(projTick);
+    if (proj.isFlying && !proj.isPaused || dt === 0) drawProjectileSimulation();
+    animationFrameId = requestAnimationFrame(projTick);
 }
 
 // --- SIMULATION PHYSICS INTEGRATOR ---
 function simTick(timestamp) {
+    if (state.activeView !== 'sim') return;
     if (!state.lastFrameTime) state.lastFrameTime = timestamp;
     const dtReal = (timestamp - state.lastFrameTime) / 1000.0;
     state.lastFrameTime = timestamp;
     
-    const dt = Math.min(0.08, dtReal * state.simSpeed);
+    const dt = document.hidden ? 0 : Math.min(0.08, dtReal * state.simSpeed);
     
     if (state.isPlaying) {
         // Integrate motion using solved acceleration
         // Under Newton's First Law, if acceleration = 0, velocity remains constant!
-        state.velocity += state.acceleration * dt;
-        
-        // Limit velocity if it falls negative (decelerated to stop)
-        if (state.velocity < 0) {
-            state.velocity = 0;
-        }
-        
-        // Integrate position
-        state.position += state.velocity * dt;
-        
-        // Canvas visuals offsets scrolling
-        const scale = 50; // visual speed scale pixels per meter
-        gridOffset -= state.velocity * dt * scale;
+        const movingTime = state.acceleration < 0
+            ? Math.min(dt, state.velocity / -state.acceleration) : dt;
+        const displacement = state.velocity * movingTime + 0.5 * state.acceleration * movingTime * movingTime;
+        state.velocity = Math.max(0, state.velocity + state.acceleration * movingTime);
+        state.position += displacement;
+        gridOffset = (gridOffset - displacement * 50) % 10000;
         forceArrowOffset += (state.appliedForce * 0.15 + 5.0) * dt * 4;
         
         // Sync badge indicators
@@ -1676,16 +1689,20 @@ function simTick(timestamp) {
     }
     
     // Draw canvas visualizer frame
-    drawSimulation();
+    if (state.isPlaying || dt === 0) drawSimulation();
     
     // Frame loop
     if (state.activeView === 'sim') {
-        requestAnimationFrame(simTick);
+        animationFrameId = requestAnimationFrame(simTick);
     }
 }
 
+let animationFrameId = 0;
+
 // --- SPA VIEW ROUTING ---
 function navigateToHome() {
+    window.PhysicsLabs?.close();
+    cancelAnimationFrame(animationFrameId);
     playClickSound();
     state.activeView = 'home';
     state.isPlaying = false;
@@ -1701,6 +1718,8 @@ function navigateToHome() {
 }
 
 function navigateToSim() {
+    window.PhysicsLabs?.close();
+    cancelAnimationFrame(animationFrameId);
     playClickSound();
     state.activeView = 'sim';
     state.projectile.isFlying = false;
@@ -1721,10 +1740,12 @@ function navigateToSim() {
     
     // Start animation frames loop
     state.lastFrameTime = 0;
-    requestAnimationFrame(simTick);
+    animationFrameId = requestAnimationFrame(simTick);
 }
 
 function navigateToProjectileSim() {
+    window.PhysicsLabs?.close();
+    cancelAnimationFrame(animationFrameId);
     playClickSound();
     state.activeView = 'projectile';
     state.isPlaying = false;
@@ -1742,7 +1763,7 @@ function navigateToProjectileSim() {
     resetProjectile();
     
     state.projectile.lastFrameTime = 0;
-    requestAnimationFrame(projTick);
+    animationFrameId = requestAnimationFrame(projTick);
 }
 
 // --- SYSTEM EVENT LISTENERS AND BINDINGS ---
@@ -1804,12 +1825,16 @@ function setupEventListeners() {
     
     DOM.sliderMuS.addEventListener('input', (e) => {
         state.mu_s = parseFloat(e.target.value);
+        state.mu_k = Math.min(state.mu_k, state.mu_s);
+        DOM.sliderMuK.value = state.mu_k;
+        DOM.valMuK.textContent = state.mu_k.toFixed(2);
         DOM.valMuS.textContent = state.mu_s.toFixed(2);
         calculatePhysics();
     });
     
     DOM.sliderMuK.addEventListener('input', (e) => {
-        state.mu_k = parseFloat(e.target.value);
+        state.mu_k = Math.min(parseFloat(e.target.value), state.mu_s);
+        DOM.sliderMuK.value = state.mu_k;
         DOM.valMuK.textContent = state.mu_k.toFixed(2);
         calculatePhysics();
     });
@@ -1980,11 +2005,11 @@ function setupEventListeners() {
     });
     DOM.sliderProjMass.addEventListener('input', (e) => {
         state.projectile.mass = parseFloat(e.target.value);
-        updateProjectileUI();
+        resetProjectile();
     });
     DOM.sliderProjDrag.addEventListener('input', (e) => {
         state.projectile.dragCoeff = parseFloat(e.target.value);
-        updateProjectileUI();
+        resetProjectile();
     });
     
     // Zoom Slider HUD listeners
@@ -2027,7 +2052,7 @@ function setupEventListeners() {
     DOM.airResToggle.addEventListener('change', (e) => {
         state.projectile.airResistanceEnabled = e.target.checked;
         playBeepSound(state.projectile.airResistanceEnabled ? 440 : 220, 0.12, 'sine');
-        updateProjectileUI();
+        resetProjectile();
         drawProjectileSimulation();
     });
     DOM.gridToggle.addEventListener('change', (e) => {
@@ -2158,11 +2183,7 @@ function init() {
     setupDialInteractions();
     setupEventListeners();
 
-    // Trigger onboarding welcome modal if first time
-    const onboarded = storage.getItem('physics_sim_onboarded');
-    if (onboarded !== 'true') {
-        DOM.welcomeModal.classList.add('active');
-    }
+    setupAccessibility();
 
     // Set initial dynamic builds
     calculatePhysics();
@@ -2192,3 +2213,43 @@ function init() {
 
 // Trigger initialization
 window.addEventListener('DOMContentLoaded', init);
+
+function setupAccessibility() {
+    document.querySelectorAll('.active-sim, .zoom-icon-btn').forEach(el => {
+        el.tabIndex = 0;
+        el.setAttribute('role', 'button');
+        el.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); el.click(); }
+        });
+    });
+    document.querySelectorAll('button[title]').forEach(el => el.setAttribute('aria-label', el.title));
+    document.querySelectorAll('input').forEach(el => {
+        if (!el.labels?.length || !el.labels[0].textContent.trim()) {
+            el.setAttribute('aria-label', el.id.replace(/slider-|toggle|proj-/g, '').replaceAll('-', ' ').trim());
+        }
+    });
+    DOM.zoomInBtn.setAttribute('aria-label', 'Zoom in');
+    DOM.zoomOutBtn.setAttribute('aria-label', 'Zoom out');
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        const heading = modal.querySelector('h2');
+        heading.id = modal.id + '-title';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', heading.id);
+        let previousFocus;
+        new MutationObserver(() => {
+            const open = modal.classList.contains('active');
+            [DOM.homeView, DOM.simView, DOM.projectileView].forEach(view => view.inert = open);
+            if (open) { previousFocus = document.activeElement; modal.querySelector('button')?.focus(); }
+            else { previousFocus?.focus(); }
+        }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+        modal.addEventListener('keydown', event => {
+            if (event.key === 'Escape') modal.classList.remove('active');
+            if (event.key !== 'Tab') return;
+            const buttons = [...modal.querySelectorAll('button')];
+            const first = buttons[0], last = buttons.at(-1);
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        });
+    });
+}
