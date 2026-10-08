@@ -90,7 +90,9 @@ const state = {
         maxRange: 0,
 
         // Path tracking
-        currentPath: [], // Array of {x, y} in meters
+        currentPath: new Float64Array(4802), // Bounded, interleaved x/y trail buffer
+        pathCount: 0,
+        pathRevision: 0,
         ghostPaths: [],  // Array of arrays containing past runs
         trials: [],      // History of trials logged
 
@@ -334,7 +336,7 @@ function playLandingSound() {
 function updateEngineHum() {
     if (!audioCtx || state.isMuted) return;
     
-    if (state.isPlaying && state.velocity > 0.01) {
+    if (!document.hidden && state.isPlaying && state.velocity > 0.01) {
         const pitch = Math.min(240, 42 + state.velocity * 5);
         humOscillator.frequency.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
         
@@ -408,6 +410,7 @@ function buildDataTableRows() {
 
 // --- PHYSICS ENGINE CALCULATIONS (With Static & Kinetic Friction) ---
 function calculatePhysics() {
+    tensionDirty=true;
     // 1. Calculate total mass
     state.totalMass = state.masses.reduce((sum, m) => sum + m, 0);
     
@@ -456,18 +459,18 @@ function calculatePhysics() {
     // This scales ropes correctly whether decelerating or accelerating.
     const tensionAcceleration = state.totalMass > 0 ? (state.appliedForce / state.totalMass) : 0;
     
-    state.tensions = [];
+    state.tensions.length = state.masses.length - 1;
     for (let i = 0; i < state.masses.length - 1; i++) {
         let cumulativeMass = 0;
         for (let j = 0; j <= i; j++) {
             cumulativeMass += state.masses[j];
         }
-        state.tensions.push(cumulativeMass * tensionAcceleration);
+        state.tensions[i] = cumulativeMass * tensionAcceleration;
     }
-    
+
     // Safety zero force clamp
     if (state.appliedForce === 0) {
-        state.tensions = state.tensions.map(() => 0);
+        state.tensions.fill(0);
     }
     
     // 4. Update UI readouts
@@ -768,17 +771,24 @@ function setupGraphGradients() {
 let ctx = null;
 let canvasWidth = 800;
 let canvasHeight = 400;
+const tensionLayer=document.createElement('canvas');
+let tensionDirty=true,tensionFit=1;
 let gridOffset = 0;
 let forceArrowOffset = 0;
+let tensionLastReadout=0;
+const tensionSizes=new Float64Array(6), tensionBlockX=new Float64Array(6);
+const ropeBaseRGB=new Float32Array([130,145,165]),ropeActiveRGB=new Float32Array([249,115,22]);
+const forceDash=new Float32Array([8,6]),ghostDash=new Float32Array([4,4]),vectorDash=new Float32Array([2,2]),noDash=new Float32Array(0);
 
 function resizeCanvas() {
+    tensionDirty=true;
     if (!DOM.canvas) return;
     
     const rect = DOM.canvas.parentNode.getBoundingClientRect();
     canvasWidth = Math.max(1, rect.width);
     canvasHeight = Math.max(1, rect.height);
     
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     DOM.canvas.width = canvasWidth * dpr;
     DOM.canvas.height = canvasHeight * dpr;
     
@@ -811,12 +821,7 @@ function drawRoundedRect(ctx, x, y, width, height, radius, fill, stroke, strokeW
 }
 
 // Draw a shaded 3D Block with bevel depth
-function draw3DBlock(ctx, x, y, size, massId, massValue) {
-    const radius = 6;
-    const depth = 8; // Bevel depth
-    
-    // Front face primary color (matching mass theme color)
-    const colors = {
+const blockColors = {
         m1: { front: '#f43f5e', top: '#fb7185', side: '#be123c' },
         m2: { front: '#0ea5e9', top: '#38bdf8', side: '#0369a1' },
         m3: { front: '#10b981', top: '#34d399', side: '#047857' },
@@ -825,7 +830,12 @@ function draw3DBlock(ctx, x, y, size, massId, massValue) {
         m6: { front: '#ec4899', top: '#f472b6', side: '#be185d' }
     };
     
-    const theme = colors[`m${massId}`] || colors.m1;
+function draw3DBlock(ctx, x, y, size, massId, massValue) {
+    const radius = 6;
+    const depth = 8; // Bevel depth
+
+    // Front face primary color (matching mass theme color)
+    const theme = blockColors[`m${massId}`] || blockColors.m1;
     
     // 1. Draw soft Ground shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
@@ -877,11 +887,11 @@ function draw3DBlock(ctx, x, y, size, massId, massValue) {
     // 6. Draw Text Label details (e.g. M1, 2.5 kg)
     ctx.textAlign = 'center';
     
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#0b1220';
     ctx.font = `800 ${size > 60 ? '14px' : '12px'} Outfit, -apple-system, sans-serif`;
     ctx.fillText(`M${massId}`, x + size/2, y + size/2 - 3);
-    
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+
+    ctx.fillStyle = '#0b1220';
     ctx.font = `700 ${size > 60 ? '11px' : '9.5px'} JetBrains Mono, monospace`;
     ctx.fillText(`${massValue.toFixed(1)}kg`, x + size/2, y + size/2 + 10);
 }
@@ -904,24 +914,22 @@ function drawSimulation() {
     const floorY = Math.round(canvasHeight * 0.72);
     
     // 1. Grid Background
-    ctx.strokeStyle = '#f1f5f9';
+    ctx.strokeStyle = Theme.palette.grid;
     ctx.lineWidth = 1;
     const scrollOffset = gridOffset % gridSize;
+    ctx.beginPath();
     for (let x = scrollOffset; x < canvasWidth; x += gridSize) {
-        ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, floorY);
-        ctx.stroke();
     }
     for (let y = 0; y < floorY; y += gridSize) {
-        ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(canvasWidth, y);
-        ctx.stroke();
     }
-    
+
+    ctx.stroke();
     // 2. Draw Floor
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeStyle = Theme.palette.axis;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(0, floorY);
@@ -934,14 +942,23 @@ function drawSimulation() {
         ctx.lineWidth = 2.5;
         const hatchSpacing = 16;
         const hatchOffset = (gridOffset * 1.25) % hatchSpacing;
+        ctx.beginPath();
         for (let x = hatchOffset - 20; x < canvasWidth + 20; x += hatchSpacing) {
-            ctx.beginPath();
             ctx.moveTo(x, floorY);
             ctx.lineTo(x - 8, floorY + 12);
-            ctx.stroke();
         }
+        ctx.stroke();
     }
     
+    if(tensionDirty) {
+        tensionLayer.width=DOM.canvas.width;tensionLayer.height=DOM.canvas.height;
+        const live=ctx;ctx=tensionLayer.getContext('2d');ctx.setTransform(DOM.canvas.width/canvasWidth,0,0,DOM.canvas.height/canvasHeight,0,0);
+        drawTensionChain(floorY);ctx=live;tensionDirty=false;
+    }
+    ctx.drawImage(tensionLayer,0,0,canvasWidth,canvasHeight);
+    drawTensionForce(floorY);
+}
+function drawTensionChain(floorY) {
     // 3. Size and Position calculations
     const N = state.masses.length;
     const baseBlockSize = 50;
@@ -949,31 +966,29 @@ function drawSimulation() {
     const ropeLength = 100;
     const hookR = 5; // radius of hook
     
-    const sizes = state.masses.map(m => baseBlockSize + m * massFactor);
-    
+    const sizes = tensionSizes;
+    for (let i=0;i<N;i++) sizes[i]=baseBlockSize+state.masses[i]*massFactor;
+
     // Solve chain width & centering
     let totalChainWidth = 0;
-    sizes.forEach((s, idx) => {
-        totalChainWidth += s;
-        if (idx < N - 1) totalChainWidth += ropeLength;
-    });
-    
-    const fitScale = Math.min(1, (canvasWidth - 32) / (totalChainWidth + 240));
+    for(let i=0;i<N;i++) {totalChainWidth+=sizes[i];if(i<N-1)totalChainWidth+=ropeLength;}
+
+    tensionFit = Math.min(1, (canvasWidth - 32) / (totalChainWidth + 240));
     ctx.save();
-    ctx.translate(16, floorY * (1 - fitScale));
-    ctx.scale(fitScale, fitScale);
-    const chainStart = ((canvasWidth - 32) / fitScale - totalChainWidth - 220) / 2;
-    
-    const blockX = [];
+    ctx.translate(16, floorY * (1 - tensionFit));
+    ctx.scale(tensionFit, tensionFit);
+    const chainStart = ((canvasWidth - 32) / tensionFit - totalChainWidth - 220) / 2;
+
+    const blockX = tensionBlockX;
     let currentX = chainStart;
     for (let i = 0; i < N; i++) {
-        blockX.push(currentX);
+        blockX[i] = currentX;
         currentX += sizes[i] + ropeLength;
     }
-    
+
     // 4. Draw Connected Ropes / Tensions
-    const baseRGB = [200, 206, 218];
-    const activeRGB = [249, 115, 22]; // Orange glow
+    const baseRGB = ropeBaseRGB;
+    const activeRGB = ropeActiveRGB; // Orange glow
     const maxTensionVal = 100;
     
     for (let i = 0; i < N - 1; i++) {
@@ -1004,16 +1019,19 @@ function drawSimulation() {
         
         // Tension text overlay
         ctx.font = '700 11px JetBrains Mono, monospace';
-        ctx.fillStyle = ratio > 0.3 ? '#06b6d4' : '#475569';
+        ctx.fillStyle = ratio > 0.3 ? Theme.palette.blue : Theme.palette.muted;
         ctx.textAlign = 'center';
         ctx.fillText(`T${i+1}: ${tension.toFixed(1)}N`, (xStart + xEnd)/2, (yStart + yEnd)/2 - 10);
     }
     
     // 5. Draw 3D masses
-    state.masses.forEach((m, i) => {
-        draw3DBlock(ctx, blockX[i], floorY - sizes[i], sizes[i], i + 1, m);
-    });
-    
+    for(let i=0;i<N;i++)draw3DBlock(ctx,blockX[i],floorY-sizes[i],sizes[i],i+1,state.masses[i]);
+
+    ctx.restore();
+}
+function drawTensionForce(floorY) {
+    const N=state.masses.length,sizes=tensionSizes,blockX=tensionBlockX,hookR=5,maxTensionVal=100;
+    ctx.save();ctx.translate(16,floorY*(1-tensionFit));ctx.scale(tensionFit,tensionFit);
     // 6. Draw Applied Force Vector Arrow from last mass (pointing right)
     const forceRatio = state.appliedForce / maxTensionVal;
     
@@ -1029,7 +1047,7 @@ function drawSimulation() {
         ctx.save();
         ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
         ctx.shadowBlur = 10;
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = Theme.palette.red;
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         
@@ -1038,14 +1056,14 @@ function drawSimulation() {
         ctx.lineTo(xEnd, yEnd);
         
         if (state.isPlaying) {
-            ctx.setLineDash([8, 6]);
+            ctx.setLineDash(forceDash);
             ctx.lineDashOffset = -forceArrowOffset;
         }
         ctx.stroke();
         ctx.restore();
         
         // Arrowhead
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = Theme.palette.red;
         ctx.beginPath();
         ctx.moveTo(xEnd, yEnd);
         ctx.lineTo(xEnd - 12, yEnd - 7);
@@ -1056,26 +1074,34 @@ function drawSimulation() {
         
         // Arrow Text
         ctx.font = '800 12px Outfit, -apple-system, sans-serif';
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = Theme.palette.red;
         ctx.textAlign = 'left';
         ctx.fillText(`F: ${state.appliedForce.toFixed(1)} N`, xEnd + 8, yEnd + 4);
     }
     ctx.restore();
 }
 
+
+
 // --- PROJECTILE MOTION SIMULATOR FUNCTIONS ---
 let ctxProj = null;
 let canvasWidthProj = 800;
 let canvasHeightProj = 400;
+const projectileBase=document.createElement('canvas'),projectileTrail=document.createElement('canvas');
+let projectileBaseDirty=true,trailCtx=null,trailDrawn=0,trailRevision=-1;
+let cachedAngle,cachedSpeed,cachedHeight,cachedZoom,cachedScale,cachedGrid,cachedGhostCount;
+let projectileLastReadout=0;
+
 
 function resizeCanvasProj() {
+    projectileBaseDirty=true;
     if (!DOM.canvasProj) return;
     
     const rect = DOM.canvasProj.parentNode.getBoundingClientRect();
     canvasWidthProj = Math.max(1, rect.width);
     canvasHeightProj = Math.max(1, rect.height);
     
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     DOM.canvasProj.width = canvasWidthProj * dpr;
     DOM.canvasProj.height = canvasHeightProj * dpr;
     
@@ -1083,7 +1109,7 @@ function resizeCanvasProj() {
     ctxProj.scale(dpr, dpr);
 }
 
-function drawProjectileSimulation() {
+function drawProjectileBase() {
     if (!ctxProj) return;
     
     // Clear canvas
@@ -1133,7 +1159,7 @@ function drawProjectileSimulation() {
     
     // 2. Draw Coordinate Grid if enabled
     if (proj.gridEnabled) {
-        ctxProj.strokeStyle = '#f1f5f9';
+        ctxProj.strokeStyle = Theme.palette.grid;
         ctxProj.lineWidth = 1;
         
         let interval = 10;
@@ -1153,7 +1179,7 @@ function drawProjectileSimulation() {
             
             // X label ticks
             ctxProj.font = '500 10px JetBrains Mono, monospace';
-            ctxProj.fillStyle = '#64748b';
+            ctxProj.fillStyle = Theme.palette.muted;
             ctxProj.textAlign = 'center';
             ctxProj.fillText(`${m}m`, x, yFloor + 18);
         }
@@ -1168,14 +1194,14 @@ function drawProjectileSimulation() {
             
             // Y label ticks
             ctxProj.font = '500 10px JetBrains Mono, monospace';
-            ctxProj.fillStyle = '#64748b';
+            ctxProj.fillStyle = Theme.palette.muted;
             ctxProj.textAlign = 'right';
             ctxProj.fillText(`${m}m`, xLaunch - 8, y + 4);
         }
     }
     
     // 3. Draw Ground Line
-    ctxProj.strokeStyle = '#e2e8f0';
+    ctxProj.strokeStyle = Theme.palette.axis;
     ctxProj.lineWidth = 3;
     ctxProj.beginPath();
     ctxProj.moveTo(0, yFloor);
@@ -1194,37 +1220,17 @@ function drawProjectileSimulation() {
     
     // 4. Draw Ghost Trails
     proj.ghostPaths.forEach((path) => {
-        ctxProj.strokeStyle = 'rgba(168, 85, 247, 0.15)';
+        ctxProj.strokeStyle = Theme.palette.trail;
         ctxProj.lineWidth = 1.5;
-        ctxProj.setLineDash([4, 4]);
+        ctxProj.setLineDash(ghostDash);
         ctxProj.beginPath();
-        path.forEach((pt, idx) => {
-            const sx = xLaunch + pt.x * currentScale;
-            const sy = yFloor - pt.y * currentScale;
-            if (idx === 0) ctxProj.moveTo(sx, sy);
-            else ctxProj.lineTo(sx, sy);
-        });
+        for(let i=0;i<path.length;i+=2) {
+            const sx=xLaunch+path[i]*currentScale,sy=yFloor-path[i+1]*currentScale;
+            if(i===0)ctxProj.moveTo(sx,sy);else ctxProj.lineTo(sx,sy);
+        }
         ctxProj.stroke();
-        ctxProj.setLineDash([]);
+        ctxProj.setLineDash(noDash);
     });
-    
-    // 5. Draw Active Trajectory
-    if (proj.currentPath.length > 0) {
-        ctxProj.save();
-        ctxProj.strokeStyle = '#a855f7';
-        ctxProj.shadowColor = 'rgba(168, 85, 247, 0.5)';
-        ctxProj.shadowBlur = 10;
-        ctxProj.lineWidth = 3;
-        ctxProj.beginPath();
-        proj.currentPath.forEach((pt, idx) => {
-            const sx = xLaunch + pt.x * currentScale;
-            const sy = yFloor - pt.y * currentScale;
-            if (idx === 0) ctxProj.moveTo(sx, sy);
-            else ctxProj.lineTo(sx, sy);
-        });
-        ctxProj.stroke();
-        ctxProj.restore();
-    }
     
     // 6. Draw Premium Cannon Launcher at (0, launchHeight)
     const cannonY = yFloor - proj.height * currentScale;
@@ -1232,11 +1238,11 @@ function drawProjectileSimulation() {
     ctxProj.translate(xLaunch, cannonY);
     
     // Turret base flange
-    ctxProj.fillStyle = '#475569';
+    ctxProj.fillStyle = Theme.palette.muted;
     ctxProj.beginPath();
     ctxProj.arc(0, 0, 12, 0, 2 * Math.PI);
     ctxProj.fill();
-    ctxProj.strokeStyle = '#64748b';
+    ctxProj.strokeStyle = Theme.palette.muted;
     ctxProj.lineWidth = 1.5;
     ctxProj.stroke();
     
@@ -1255,7 +1261,7 @@ function drawProjectileSimulation() {
         ctxProj.fillRect(-5, 0, 10, hPix);
         
         // Steel rails
-        ctxProj.fillStyle = '#475569';
+        ctxProj.fillStyle = Theme.palette.muted;
         ctxProj.fillRect(-6, 0, 2, hPix);
         ctxProj.fillRect(4, 0, 2, hPix);
         
@@ -1281,14 +1287,14 @@ function drawProjectileSimulation() {
     // Pivot collar joint
     ctxProj.fillStyle = '#1e293b';
     ctxProj.fillRect(-4, -8, 8, 16);
-    ctxProj.strokeStyle = '#a855f7';
+    ctxProj.strokeStyle = Theme.palette.purple;
     ctxProj.lineWidth = 1;
     ctxProj.strokeRect(-4, -8, 8, 16);
     
     // Metal barrel gradient
     const barrelGrad = ctxProj.createLinearGradient(0, -6, 0, 6);
     barrelGrad.addColorStop(0, '#334155');
-    barrelGrad.addColorStop(0.3, '#64748b');
+    barrelGrad.addColorStop(0.3, Theme.palette.muted);
     barrelGrad.addColorStop(0.7, '#334155');
     barrelGrad.addColorStop(1, '#1e293b');
     
@@ -1314,18 +1320,43 @@ function drawProjectileSimulation() {
     ctxProj.fill();
     ctxProj.restore();
     
+}
+
+function drawProjectileSimulation() {
+    if(!ctxProj)return;
+    const proj=state.projectile;
+    // Invalidate only on edits, resize, or palette changes.
+    if(projectileBaseDirty || cachedAngle!==proj.angle || cachedSpeed!==proj.speed || cachedHeight!==proj.height || cachedZoom!==proj.zoomMode || cachedScale!==proj.manualScale || cachedGrid!==proj.gridEnabled || cachedGhostCount!==proj.ghostPaths.length) {
+        cachedAngle=proj.angle;cachedSpeed=proj.speed;cachedHeight=proj.height;cachedZoom=proj.zoomMode;cachedScale=proj.manualScale;cachedGrid=proj.gridEnabled;cachedGhostCount=proj.ghostPaths.length;
+        projectileBase.width=DOM.canvasProj.width;projectileBase.height=DOM.canvasProj.height;
+        projectileTrail.width=DOM.canvasProj.width;projectileTrail.height=DOM.canvasProj.height;
+        const live=ctxProj;
+        ctxProj=projectileBase.getContext('2d');ctxProj.setTransform(DOM.canvasProj.width/canvasWidthProj,0,0,DOM.canvasProj.height/canvasHeightProj,0,0);
+        drawProjectileBase();ctxProj=live;projectileBaseDirty=false;trailDrawn=0;
+        trailCtx=projectileTrail.getContext('2d');trailCtx.setTransform(DOM.canvasProj.width/canvasWidthProj,0,0,DOM.canvasProj.height/canvasHeightProj,0,0);
+    }
+    const yFloor=Math.round(canvasHeightProj*.82),xLaunch=80,currentScale=proj.scale;
+    ctxProj.clearRect(0,0,canvasWidthProj,canvasHeightProj);ctxProj.drawImage(projectileBase,0,0,canvasWidthProj,canvasHeightProj);
+    if(trailRevision!==proj.pathRevision) {trailCtx.clearRect(0,0,canvasWidthProj,canvasHeightProj);trailDrawn=0;trailRevision=proj.pathRevision;}
+    if(proj.pathCount>trailDrawn) {
+        trailCtx.beginPath();let i=Math.max(0,trailDrawn-1);
+        trailCtx.moveTo(xLaunch+proj.currentPath[2*i]*currentScale,yFloor-proj.currentPath[2*i+1]*currentScale);
+        for(i++;i<proj.pathCount;i++)trailCtx.lineTo(xLaunch+proj.currentPath[2*i]*currentScale,yFloor-proj.currentPath[2*i+1]*currentScale);
+        trailCtx.strokeStyle=Theme.palette.purple;trailCtx.lineWidth=3;trailCtx.lineJoin='round';trailCtx.stroke();trailDrawn=proj.pathCount;
+    }
+    ctxProj.drawImage(projectileTrail,0,0,canvasWidthProj,canvasHeightProj);
     // 7. Draw Projectile & Vectors
     const px = xLaunch + proj.x * currentScale;
     const py = yFloor - proj.y * currentScale;
     
     ctxProj.save();
-    ctxProj.fillStyle = '#a855f7';
+    ctxProj.fillStyle = Theme.palette.purple;
     ctxProj.shadowColor = 'rgba(168, 85, 247, 0.8)';
     ctxProj.shadowBlur = 12;
     ctxProj.beginPath();
     ctxProj.arc(px, py, 6, 0, 2 * Math.PI);
     ctxProj.fill();
-    ctxProj.strokeStyle = '#ffffff';
+    ctxProj.strokeStyle = Theme.palette.ink;
     ctxProj.lineWidth = 1;
     ctxProj.stroke();
     ctxProj.restore();
@@ -1338,7 +1369,7 @@ function drawProjectileSimulation() {
             
             // Velocity vector
             ctxProj.save();
-            ctxProj.strokeStyle = '#a855f7';
+            ctxProj.strokeStyle = Theme.palette.purple;
             ctxProj.lineWidth = 2.5;
             ctxProj.lineCap = 'round';
             ctxProj.beginPath();
@@ -1347,7 +1378,7 @@ function drawProjectileSimulation() {
             ctxProj.stroke();
             
             const angleVal = Math.atan2(-proj.vy, proj.vx);
-            ctxProj.fillStyle = '#a855f7';
+            ctxProj.fillStyle = Theme.palette.purple;
             ctxProj.beginPath();
             ctxProj.translate(px + proj.vx * vectorScale, py - proj.vy * vectorScale);
             ctxProj.rotate(angleVal);
@@ -1361,9 +1392,9 @@ function drawProjectileSimulation() {
             
             // Component vectors
             ctxProj.save();
-            ctxProj.strokeStyle = '#06b6d4';
+            ctxProj.strokeStyle = Theme.palette.blue;
             ctxProj.lineWidth = 1.5;
-            ctxProj.setLineDash([2, 2]);
+            ctxProj.setLineDash(vectorDash);
             
             ctxProj.beginPath();
             ctxProj.moveTo(px, py);
@@ -1379,7 +1410,7 @@ function drawProjectileSimulation() {
             
             // Labels
             ctxProj.font = '600 10px JetBrains Mono, monospace';
-            ctxProj.fillStyle = '#06b6d4';
+            ctxProj.fillStyle = Theme.palette.blue;
             ctxProj.textAlign = 'center';
             ctxProj.fillText(`vx: ${proj.vx.toFixed(1)}m/s`, px + (proj.vx * vectorScale) / 2, py + 12);
             ctxProj.fillText(`vy: ${proj.vy.toFixed(1)}m/s`, px + proj.vx * vectorScale + 25, py - (proj.vy * vectorScale) / 2);
@@ -1391,6 +1422,7 @@ function resetProjectile() {
     const proj = state.projectile;
     proj.isFlying = false;
     proj.isPaused = false;
+    wakeActiveSimulation();
     proj.x = 0;
     proj.y = proj.height;
     proj.time = 0;
@@ -1407,7 +1439,7 @@ function resetProjectile() {
     proj.initialUy = proj.vy;
     
     proj.maxHeight = proj.height;
-    proj.currentPath = [{ x: proj.x, y: proj.y }];
+    proj.pathCount=1;proj.pathRevision++;proj.currentPath[0]=proj.x;proj.currentPath[1]=proj.y;
     
     updateProjectileUI();
     drawProjectileSimulation();
@@ -1419,7 +1451,7 @@ function resetProjectile() {
     DOM.pauseBtnProj.querySelector('span').textContent = 'PAUSE';
     
     // Reset pause button styling
-    DOM.pauseBtnProj.style.color = '#f59e0b';
+    DOM.pauseBtnProj.style.color = 'var(--m4-color)';
     DOM.pauseBtnProj.style.borderColor = 'rgba(245, 158, 11, 0.3)';
 }
 
@@ -1431,6 +1463,7 @@ function launchProjectile() {
     
     proj.isFlying = true;
     proj.isPaused = false;
+    wakeActiveSimulation();
     proj.x = 0;
     proj.y = proj.height;
     proj.time = 0;
@@ -1444,7 +1477,7 @@ function launchProjectile() {
     proj.initialUy = proj.vy;
     
     proj.maxHeight = proj.height;
-    proj.currentPath = [{ x: proj.x, y: proj.y }];
+    proj.pathCount=1;proj.pathRevision++;proj.currentPath[0]=proj.x;proj.currentPath[1]=proj.y;
     proj.lastFrameTime = 0;
     
     DOM.launchBtn.querySelector('span').textContent = 'FIRING...';
@@ -1453,7 +1486,7 @@ function launchProjectile() {
     DOM.pauseBtnProj.querySelector('span').textContent = 'PAUSE';
     
     // Reset pause button styling
-    DOM.pauseBtnProj.style.color = '#f59e0b';
+    DOM.pauseBtnProj.style.color = 'var(--m4-color)';
     DOM.pauseBtnProj.style.borderColor = 'rgba(245, 158, 11, 0.3)';
     
     updateProjectileUI();
@@ -1463,7 +1496,7 @@ function updateProjectileUI() {
     const proj = state.projectile;
     
     DOM.sliderProjAngle.value = proj.angle;
-    DOM.valProjAngle.innerHTML = `${proj.angle}&deg;`;
+    DOM.valProjAngle.textContent = `${proj.angle}°`;
     
     DOM.sliderProjSpeed.value = proj.speed;
     DOM.valProjSpeed.textContent = `${proj.speed} m/s`;
@@ -1483,19 +1516,19 @@ function updateProjectileUI() {
     if (proj.airResistanceEnabled) {
         DOM.airResPanel.style.display = 'flex';
         DOM.airResBadge.classList.add('active');
-        DOM.airResBadge.querySelector('strong').style.color = '#10b981';
+        DOM.airResBadge.querySelector('strong').style.color = 'var(--m3-color)';
         DOM.airResText.textContent = "ON";
     } else {
         DOM.airResPanel.style.display = 'none';
         DOM.airResBadge.classList.remove('active');
-        DOM.airResBadge.querySelector('strong').style.color = '#ef4444';
+        DOM.airResBadge.querySelector('strong').style.color = 'var(--force-color)';
         DOM.airResText.textContent = "OFF";
     }
     
     DOM.rangeReadoutBadge.textContent = `${proj.x.toFixed(1)} m`;
     DOM.heightReadoutBadge.textContent = `${proj.y.toFixed(1)} m`;
     
-    DOM.telemetryRange.innerHTML = `R = ${proj.x.toFixed(2)} <span style="font-size: 0.95rem; font-weight:500;">m</span>`;
+    DOM.telemetryRange.textContent = `R = ${proj.x.toFixed(2)} m`;
     DOM.telemetryHeight.textContent = `${proj.maxHeight.toFixed(2)} m`;
     DOM.telemetryTime.textContent = `${proj.time.toFixed(2)} s`;
     DOM.telemetryVelocity.textContent = `(${proj.vx.toFixed(2)}, ${proj.vy.toFixed(2)}) m/s`;
@@ -1512,10 +1545,10 @@ function updateSuvatHUD() {
     DOM.suvatS.textContent = `x: ${proj.x.toFixed(2)}, y: ${(proj.y - proj.height).toFixed(2)} m`;
     
     // U (initial velocity components)
-    DOM.suvatU.innerHTML = `u<sub>x</sub>: ${proj.initialUx.toFixed(2)}, u<sub>y</sub>: ${proj.initialUy.toFixed(2)} m/s`;
-    
+    DOM.suvatU.textContent = `uₓ: ${proj.initialUx.toFixed(2)}, uᵧ: ${proj.initialUy.toFixed(2)} m/s`;
+
     // V (current velocity components)
-    DOM.suvatV.innerHTML = `v<sub>x</sub>: ${proj.vx.toFixed(2)}, v<sub>y</sub>: ${proj.vy.toFixed(2)} m/s`;
+    DOM.suvatV.textContent = `vₓ: ${proj.vx.toFixed(2)}, vᵧ: ${proj.vy.toFixed(2)} m/s`;
     
     // A (acceleration components, resolving gravity + drag forces)
     const g = 9.81;
@@ -1531,7 +1564,7 @@ function updateSuvatHUD() {
         }
     }
     
-    DOM.suvatA.innerHTML = `a<sub>x</sub>: ${ax.toFixed(2)}, a<sub>y</sub>: ${ay.toFixed(2)} m/s²`;
+    DOM.suvatA.textContent = `aₓ: ${ax.toFixed(2)}, aᵧ: ${ay.toFixed(2)} m/s²`;
     
     // T (elapsed flight time)
     DOM.suvatT.textContent = `t: ${proj.time.toFixed(2)} s`;
@@ -1579,11 +1612,8 @@ function projTick(timestamp) {
         while (remaining > 1e-9 && proj.isFlying) {
             let h = Math.min(remaining, 1 / 240);
             const drag = proj.airResistanceEnabled ? 0.5 * 1.2 * proj.dragCoeff * 0.05 / proj.mass : 0;
-            const acceleration = (vx, vy) => {
-                const speed = Math.hypot(vx, vy);
-                return [-drag * speed * vx, -9.81 - drag * speed * vy];
-            };
-            const [ax, ay] = acceleration(proj.vx, proj.vy);
+            const speed=Math.hypot(proj.vx,proj.vy);
+            const ax=-drag*speed*proj.vx,ay=-9.81-drag*speed*proj.vy;
             // Resolve the impact time within this step instead of overshooting ground.
             if (proj.y + proj.vy * h + 0.5 * ay * h * h <= 0) {
                 let low = 0, high = h;
@@ -1596,7 +1626,7 @@ function projTick(timestamp) {
             }
             const mx = proj.vx + ax * h / 2;
             const my = proj.vy + ay * h / 2;
-            const [midAx, midAy] = acceleration(mx, my);
+            const midSpeed=Math.hypot(mx,my),midAx=-drag*midSpeed*mx,midAy=-9.81-drag*midSpeed*my;
             if (proj.vy > 0 && proj.vy + midAy * h < 0) {
                 proj.maxHeight = Math.max(proj.maxHeight, proj.y - proj.vy * proj.vy / (2 * midAy));
             }
@@ -1609,10 +1639,12 @@ function projTick(timestamp) {
             remaining -= h;
             if (proj.y <= 1e-9 && proj.vy <= 0) { proj.y = 0; break; }
         }
-        proj.currentPath.push({ x: proj.x, y: proj.y });
-        if (proj.currentPath.length > 2400) {
-            proj.currentPath = proj.currentPath.filter((_, i) => i % 2 === 0 || i === proj.currentPath.length - 1);
+        // Compact in place only at capacity; retain both endpoints.
+        if(proj.pathCount===2401) {
+            for(let i=1;i<=1200;i++){proj.currentPath[2*i]=proj.currentPath[4*i];proj.currentPath[2*i+1]=proj.currentPath[4*i+1];}
+            proj.pathCount=1201;proj.pathRevision++;
         }
+        proj.currentPath[2*proj.pathCount]=proj.x;proj.currentPath[2*proj.pathCount+1]=proj.y;proj.pathCount++;
 
         if (proj.y <= 0) {
             proj.y = 0;
@@ -1631,7 +1663,8 @@ function projTick(timestamp) {
                 airRes: proj.airResistanceEnabled ? `Cd=${proj.dragCoeff.toFixed(2)}` : 'OFF'
             });
             
-            proj.ghostPaths.push([...proj.currentPath]);
+            proj.ghostPaths.push(proj.currentPath.slice(0,proj.pathCount*2));
+            projectileBaseDirty=true;
             if (proj.ghostPaths.length > 3) {
                 proj.ghostPaths.shift();
             }
@@ -1648,11 +1681,11 @@ function projTick(timestamp) {
             showNotification(`Projectile landed! Range: ${proj.x.toFixed(1)} m`);
         }
         
-        updateProjectileUI();
+        if(timestamp-projectileLastReadout>=100 || !proj.isFlying) {updateProjectileUI();projectileLastReadout=timestamp;}
     }
-    
+
     if (proj.isFlying && !proj.isPaused || dt === 0) drawProjectileSimulation();
-    animationFrameId = requestAnimationFrame(projTick);
+    if (proj.isFlying && !proj.isPaused && !document.hidden) animationFrameId = requestAnimationFrame(projTick);
 }
 
 // --- SIMULATION PHYSICS INTEGRATOR ---
@@ -1675,29 +1708,40 @@ function simTick(timestamp) {
         gridOffset = (gridOffset - displacement * 50) % 10000;
         forceArrowOffset += (state.appliedForce * 0.15 + 5.0) * dt * 4;
         
-        // Sync badge indicators
-        DOM.distanceReadout.textContent = `${state.position.toFixed(1)} m`;
-        DOM.velocityReadout.textContent = `${state.velocity.toFixed(1)} m/s`;
+        if(timestamp-tensionLastReadout>=100) {
+            DOM.distanceReadout.textContent=state.position.toFixed(1)+' m';DOM.velocityReadout.textContent=state.velocity.toFixed(1)+' m/s';updateEngineHum();tensionLastReadout=timestamp;
+        }
         
         // Check if velocity dropped to 0 to recalibrate physics static hold
         if (state.velocity === 0 && !state.isStaticState) {
             calculatePhysics();
         }
         
-        // Synthesizer update
-        updateEngineHum();
+
     }
     
     // Draw canvas visualizer frame
     if (state.isPlaying || dt === 0) drawSimulation();
     
     // Frame loop
-    if (state.activeView === 'sim') {
+    if (state.activeView === 'sim' && state.isPlaying && !document.hidden) {
         animationFrameId = requestAnimationFrame(simTick);
     }
 }
 
 let animationFrameId = 0;
+
+// One scheduled frame at a time; paused and hidden simulations are idle.
+function wakeActiveSimulation() {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+    state.lastFrameTime = 0;
+    state.projectile.lastFrameTime = 0;
+    if (document.hidden) return;
+    if (state.activeView === 'sim' && state.isPlaying) animationFrameId = requestAnimationFrame(simTick);
+    if (state.activeView === 'projectile' && state.projectile.isFlying && !state.projectile.isPaused) animationFrameId = requestAnimationFrame(projTick);
+}
+document.addEventListener('visibilitychange', () => { wakeActiveSimulation(); updateEngineHum(); });
 
 // --- SPA VIEW ROUTING ---
 function navigateToHome() {
@@ -1763,7 +1807,7 @@ function navigateToProjectileSim() {
     resetProjectile();
     
     state.projectile.lastFrameTime = 0;
-    animationFrameId = requestAnimationFrame(projTick);
+    wakeActiveSimulation();
 }
 
 // --- SYSTEM EVENT LISTENERS AND BINDINGS ---
@@ -1844,6 +1888,7 @@ function setupEventListeners() {
         playClickSound();
         if (!state.isPlaying) {
             state.isPlaying = true;
+            wakeActiveSimulation();
             state.lastFrameTime = 0;
             DOM.playBtn.style.background = 'rgba(16, 185, 129, 0.25)';
             DOM.pauseBtn.classList.remove('paused');
@@ -1963,6 +2008,7 @@ function setupEventListeners() {
     // Setup ResizeObservers for canvas parent containers to handle responsive resizing seamlessly
     if (DOM.canvas && DOM.canvas.parentNode) {
         const resizeObserver = new ResizeObserver(() => {
+            if(state.activeView!=='sim')return;
             requestAnimationFrame(() => {
                 resizeCanvas();
                 if (state.activeView === 'sim') {
@@ -1975,6 +2021,7 @@ function setupEventListeners() {
 
     if (DOM.canvasProj && DOM.canvasProj.parentNode) {
         const resizeObserverProj = new ResizeObserver(() => {
+            if(state.activeView!=='projectile')return;
             requestAnimationFrame(() => {
                 resizeCanvasProj();
                 if (state.activeView === 'projectile') {
@@ -2067,7 +2114,7 @@ function setupEventListeners() {
             launchProjectile();
         } else {
             resetProjectile();
-            setTimeout(launchProjectile, 50);
+            launchProjectile();
         }
     });
     
@@ -2076,12 +2123,13 @@ function setupEventListeners() {
         if (proj.isFlying) {
             playClickSound();
             proj.isPaused = !proj.isPaused;
+            wakeActiveSimulation();
             DOM.pauseBtnProj.querySelector('span').textContent = proj.isPaused ? 'RESUME' : 'PAUSE';
             if (proj.isPaused) {
-                DOM.pauseBtnProj.style.color = '#10b981';
+                DOM.pauseBtnProj.style.color = 'var(--m3-color)';
                 DOM.pauseBtnProj.style.borderColor = 'rgba(16, 185, 129, 0.3)';
             } else {
-                DOM.pauseBtnProj.style.color = '#f59e0b';
+                DOM.pauseBtnProj.style.color = 'var(--m4-color)';
                 DOM.pauseBtnProj.style.borderColor = 'rgba(245, 158, 11, 0.3)';
             }
         }
@@ -2142,39 +2190,10 @@ function setupEventListeners() {
 
 // Visual toast alerts
 function showNotification(text) {
-    const toast = document.createElement('div');
-    toast.style.position = 'fixed';
-    toast.style.bottom = '24px';
-    toast.style.left = '50%';
-    toast.style.transform = 'translateX(-50%) translateY(20px)';
-    toast.style.background = 'rgba(10, 14, 26, 0.9)';
-    toast.style.border = '1px solid var(--accent-cyan)';
-    toast.style.boxShadow = 'var(--accent-glow)';
-    toast.style.color = '#ffffff';
-    toast.style.padding = '10px 20px';
-    toast.style.borderRadius = '20px';
-    toast.style.fontSize = '0.8rem';
-    toast.style.fontWeight = '600';
-    toast.style.fontFamily = 'var(--font-sans)';
-    toast.style.zIndex = '9999';
-    toast.style.opacity = '0';
-    toast.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    
-    document.body.appendChild(toast);
-    toast.textContent = text;
-    
-    requestAnimationFrame(() => {
-        toast.style.opacity = '1';
-        toast.style.transform = 'translateX(-50%) translateY(0)';
-    });
-    
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(20px)';
-        setTimeout(() => {
-            document.body.removeChild(toast);
-        }, 300);
-    }, 2200);
+    const toast=document.createElement('div');toast.className='notification-toast';toast.setAttribute('role','status');toast.textContent=text;document.body.append(toast);
+    const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const animation=toast.animate(still?[{opacity:1},{opacity:1},{opacity:0}]:[{opacity:0,transform:'translate(-50%,20px)'},{opacity:1,transform:'translate(-50%,0)',offset:.12},{opacity:1,transform:'translate(-50%,0)',offset:.88},{opacity:0,transform:'translate(-50%,20px)'}],{duration:2800,fill:'forwards'});
+    animation.finished.then(()=>toast.remove(),()=>toast.remove());
 }
 
 // --- INITIALIZATION ---
@@ -2253,3 +2272,10 @@ function setupAccessibility() {
         });
     });
 }
+
+// Palette invalidation redraws paused scenes as well as running ones.
+document.addEventListener('themechange',()=>{
+    projectileBaseDirty=true;tensionDirty=true;
+    if(state.activeView==='sim')drawSimulation();
+    if(state.activeView==='projectile')drawProjectileSimulation();
+});

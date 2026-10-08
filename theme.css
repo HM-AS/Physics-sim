@@ -1,0 +1,95 @@
+/* Shared UI and drawing tokens; canvas renderers read these only on invalidation. */
+:root {
+    color-scheme: dark;
+    --surface: #101a29; --surface-raised: #172235; --surface-hover: #25334a;
+    --surface-inset: #091321; --line: #344157;
+    --ui-tint: rgba(148,163,184,.08); --ui-tint-strong: rgba(148,163,184,.18);
+    --sim-scene: #0b1220; --sim-grid: #23334a; --sim-axis: #71839c;
+    --sim-ink: #e2e8f0; --sim-muted: #aab9ce; --sim-blue: #38bdf8;
+    --sim-purple: #c084fc; --sim-teal: #2dd4bf; --sim-red: #fb7185;
+    --sim-amber: #fbbf24; --sim-body: #123f61; --sim-track: #202c40;
+    --sim-trail: #9673c7;
+}
+:root[data-theme="light"] {
+    color-scheme: light;
+    --bg-main: #f2f4f7; --bg-header: #f7f8fa; --bg-sidebar: #edf1f5;
+    --bg-panel: #e6ecf3; --bg-panel-hover: #dce5ef;
+    --border-color: #c6d1de; --border-color-glow: #0e7490;
+    --text-primary: #17263c; --text-secondary: #42556f; --text-muted: #52657c;
+    --accent-cyan: #0e7490; --m1-color: #be123c; --m2-color: #0369a1;
+    --m3-color: #047857; --m4-color: #92400e; --m5-color: #7e22ce;
+    --m6-color: #be185d; --force-color: #b91c1c;
+    --surface: #eaf0f6; --surface-raised: #e0e8f1; --surface-hover: #d3dfeb;
+    --surface-inset: #f5f7fa; --line: #b9c8d8;
+    --ui-tint: rgba(30,55,85,.06); --ui-tint-strong: rgba(30,55,85,.16);
+    --sim-scene: #f5f7fa; --sim-grid: #d5dee8; --sim-axis: #627891;
+    --sim-ink: #17263c; --sim-muted: #42556f; --sim-blue: #0369a1;
+    --sim-purple: #7e22ce; --sim-teal: #0f766e; --sim-red: #be123c;
+    --sim-amber: #92400e; --sim-body: #d3e7f3; --sim-track: #dce5ef;
+    --sim-trail: #8051a9;
+}
+[data-theme-brand] { display:inline-flex; align-items:center; gap:10px; white-space:nowrap; }
+.brand-name { display:inline-flex; align-items:baseline; gap:5px; }
+.brand-name strong, .brand-name b { color:var(--accent-cyan); }
+.theme-toggle, #extended-lab .theme-toggle, #circuit-lab .theme-toggle {
+    flex:0 0 44px; width:44px; height:44px; min-height:44px; padding:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:var(--accent-cyan); background:var(--surface); border:1px solid var(--line);
+    border-radius:50%; cursor:pointer; transition:background .2s, border-color .2s, transform .2s;
+}
+.theme-toggle:hover { background:var(--surface-hover); border-color:var(--accent-cyan); transform:rotate(8deg); }
+.theme-toggle:active { transform:scale(.94); }
+.theme-toggle:focus-visible { outline:3px solid var(--accent-cyan); outline-offset:3px; }
+.theme-toggle svg { fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.theme-sun, .theme-moon { transform-origin:12px 12px; transition:opacity .3s, transform .4s; }
+.theme-moon { opacity:0; transform:rotate(-45deg) scale(.5); }
+[data-theme="dark"] .theme-moon { opacity:1; transform:rotate(0) scale(1); }
+[data-theme="dark"] .theme-sun { opacity:0; transform:rotate(60deg) scale(.5); }
+.header h1 { background:none; -webkit-text-fill-color:currentColor; letter-spacing:.03em; }
+.header-logo { gap:10px; }
+.header-sub { font-size:.85rem; }
+.logo-area, .sim-title { color:var(--text-primary); }
+.hero-title { background:linear-gradient(135deg,var(--text-primary) 40%,var(--m5-color),var(--accent-cyan)); -webkit-background-clip:text; }
+.main-canvas-area, .canvas-container, .lab-scene { background:var(--sim-scene); }
+.canvas-badge, .zoom-hud-overlay, .suvat-hud-overlay { background:var(--surface); border-color:var(--line); }
+.lab-brand { display:inline-flex; }
+.lab-render-canvas { display:block; width:100%; aspect-ratio:720 / 430; }
+.lab-chart-canvas { display:block; width:100%; aspect-ratio:640 / 180; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.lab-scene .sr-only { width:1px; height:1px; }
+.cb-brand { margin-left:auto; }
+#extended-lab { --lab-accent:var(--sim-blue) !important; }
+#extended-lab[data-lab="waves"] { --lab-accent:var(--sim-teal) !important; }
+#extended-lab[data-lab="shm"] { --lab-accent:var(--sim-purple) !important; }
+.new-sim-card { --lab-accent:var(--accent-cyan) !important; }
+#circuit-lab .cb-stage { background:var(--sim-scene); }
+.zoom-hud, .suvat-hud { background:var(--surface); border-color:var(--line); }
+#circuit-lab .cb-choice-grid button { background:linear-gradient(140deg,var(--surface-hover),var(--surface)) !important; }
+#circuit-lab .primary, #circuit-lab button[aria-pressed=true], #extended-lab .primary-action { background:var(--sim-amber); color:var(--sim-scene); }
+#extended-lab .primary-action { background:var(--lab-accent); }
+@media(max-width:768px) {
+    .header { flex-wrap:wrap; height:auto; min-height:68px; padding:10px 12px; gap:8px; }
+    .header h1 { font-size:14px; }
+    .header-sub, .header-divider { display:none; }
+    .header-actions { gap:6px; }
+    .home-header { flex-wrap:wrap; gap:12px; }
+    .header-tag { font-size:10px; }
+    .lab-header .lab-brand { display:inline-flex; flex:none; min-width:0; margin-left:0; }
+    .lab-header { gap:12px; }
+    .cb-brand { margin-left:0; }
+}
+@media(prefers-reduced-motion:reduce) { .theme-toggle, .theme-toggle * { transition:none !important; } }
+
+.notification-toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--accent-cyan);box-shadow:var(--accent-glow);color:var(--text-primary);padding:10px 20px;border-radius:20px;font:600 .8rem var(--font-sans);z-index:9999;max-width:calc(100vw - 24px); }
+
+.sidebar-section { min-width:0;max-width:100%; }
+.header h1 strong { color:var(--accent-cyan); }
+.curriculum-note a { color:var(--accent-cyan); }
+@media(max-width:768px) { .sidebar-right .sidebar-section { flex:1 1 100%; } }
+.cb-palette button { min-width:0;overflow-wrap:anywhere; }
+@media(max-width:380px) { .cb-palette { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+
+.new-sim-card[data-lab="gravity"] { --lab-accent:var(--sim-blue) !important; }
+.new-sim-card[data-lab="circuits"] { --lab-accent:var(--sim-amber) !important; }
+.new-sim-card[data-lab="waves"] { --lab-accent:var(--sim-teal) !important; }
+.new-sim-card[data-lab="shm"] { --lab-accent:var(--sim-purple) !important; }

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhysicSim HD - Interactive Physics Laboratories</title>
+    <title>PhysicsSim HD - Interactive Physics Laboratories</title>
+    <script src="theme.js"></script>
     <!-- Google Fonts for premium typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,18 +13,20 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="labs.css">
     <meta name="description" content="Six interactive physics labs: forces, projectile motion, gravitational fields, circuits, wave superposition, and simple harmonic motion.">
+    <link rel="stylesheet" href="circuit-lab.css">
+    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
-    <!-- 1. HOMEPAGE VIEW ("PhysicSim HD") -->
+    <!-- 1. HOMEPAGE VIEW ("PhysicsSim HD") -->
     <div id="home-view" class="home-container">
         <!-- Main Landing Header -->
         <header class="home-header">
-            <div class="logo-area">
+            <div class="logo-area" data-theme-brand>
                 <svg class="logo-icon-large" viewBox="0 0 24 24" width="32" height="32">
                     <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
                 </svg>
-                <span>PhysicSim <strong>HD</strong></span>
+                <span>PhysicsSim <strong>HD</strong></span>
             </div>
             <div class="header-tag">THE INTERACTIVE PHYSICS LAB</div>
         </header>
@@ -146,7 +149,7 @@
                         <path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                     </svg>
                 </button>
-                <h1>PhysicSim <strong>HD</strong> <span class="header-divider">|</span> <span class="header-sub">Tension Lab</span></h1>
+                <div data-theme-brand><h1>PhysicsSim <strong>HD</strong> </h1></div><span class="header-sub">Tension Lab</span>
             </div>
             
             <div class="header-actions">
@@ -376,7 +379,7 @@
                         <path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                     </svg>
                 </button>
-                <h1>PhysicSim <strong>HD</strong> <span class="header-divider">|</span> <span class="header-sub">Projectile Lab</span></h1>
+                <div data-theme-brand><h1>PhysicsSim <strong>HD</strong> </h1></div><span class="header-sub">Projectile Lab</span>
             </div>
             
             <div class="header-actions">
@@ -660,7 +663,7 @@
     <div class="modal-overlay" id="welcomeModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h2>Welcome to PhysicSim HD</h2>
+                <h2>Welcome to PhysicsSim HD</h2>
             </div>
             <div class="modal-body">
                 <div style="text-align: center; margin-bottom: 12px;">
@@ -668,7 +671,7 @@
                         <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
                     </svg>
                 </div>
-                <h3 style="text-align: center; border-left: none; padding-left: 0; margin-bottom: 12px; font-size: 1.1rem; color: #ffffff;">Your Interactive Digital Physics Lab</h3>
+                <h3 style="text-align: center; border-left: none; padding-left: 0; margin-bottom: 12px; font-size: 1.1rem; color: var(--text-primary);">Your Interactive Digital Physics Lab</h3>
                 <p>Welcome! You are launching the <strong>Multi-Mass Tension Visualizer</strong>, designed in accordance with syllabus standards (e.g. IB Physics A.2 - Forces and Momentum).</p>
                 
                 <div class="formula-block" style="background: rgba(6,182,212,0.03); border-color: rgba(6,182,212,0.15);">
@@ -680,7 +683,7 @@
                     </ul>
                 </div>
                 
-                <h4 style="font-weight: 700; color: #ffffff; font-size: 0.85rem; margin-top: 8px;">Key Controls:</h4>
+                <h4 style="font-weight: 700; color: var(--text-primary); font-size: 0.85rem; margin-top: 8px;">Key Controls:</h4>
                 <ul style="font-size: 0.85rem;">
                     <li><strong>[+ Block] & [- Block]:</strong> Dynamically add/remove mass blocks from the system.</li>
                     <li><strong>Interactive Knob:</strong> Grab and spin the force knob to control the applied pulling force.</li>
@@ -733,6 +736,9 @@
     <!-- Script loading -->
     <script src="app.js"></script>
     <script src="physics-models.js"></script>
+    <script src="lab-renderer.js"></script>
     <script src="labs.js"></script>
+    <script src="circuit-engine.js"></script>
+    <script src="circuit-lab.js"></script>
 </body>
 </html>
